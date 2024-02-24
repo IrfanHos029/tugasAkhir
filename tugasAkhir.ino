@@ -47,53 +47,22 @@ void loop() {
     lcd.setCursor(0,0);
     lcd.print("hasil panjang:");
     lcd.print(hasilP);
+    lcd.print("cm");
     lcd.setCursor(0,1);
     lcd.print("hasil lebar:");
     lcd.print(hasilL);
-  int length = getDistance(trigPin1, echoPin1);
-  int width = getDistance(trigPin2, echoPin2);
-//  float height = getDistance(trigPin3, echoPin3);
-//  float weight = getWeight();
-//
-//  float lengthDifference = referenceLength - length;
-//  float widthDifference = referenceWidth - width;
-//  float heightDifference = referenceHeight - height;
-//
-//  // Menampilkan hasil ke Serial Monitor
-  Serial.print(" Panjang: ");
-  Serial.println(length);
-//  Serial.println(" cm");
-//
-  Serial.print(" Lebar: ");
-  Serial.println(width);
-//  Serial.println(" cm");
-//
-//  Serial.print(" Tinggi: ");
-//  Serial.print(heightDifference);
-//  Serial.println(" cm");
-//
-//  Serial.print("Berat: ");
-//  Serial.print(weight);
-//  Serial.println(" kg");
-//
-//  if (length > maxLength) {
-//    Serial.println("Peringatan: Panjang melebihi batas maksimal!");
-//    // Di sini Anda dapat menambahkan tindakan tambahan jika Panjang melebihi batas maksimal
-//  }
-//  if (width > maxWidth) {
-//    Serial.println("Peringatan: Lebar melebihi batas maksimal!");
-//    // Di sini Anda dapat menambahkan tindakan tambahan jika Lebar melebihi batas maksimal
-//  }
-//  if (height > maxHeight) {
-//    Serial.println("Peringatan: Tinggi melebihi batas maksimal!");
-//    // Di sini Anda dapat menambahkan tindakan tambahan jika Tinggi melebihi batas maksimal
-//  }
-//  if (weight > maxWeight) {
-//    Serial.println("Peringatan: Berat melebihi batas maksimal!");
-//    // Di sini Anda dapat menambahkan tindakan tambahan jika berat melebihi batas maksimal
-//  }
-//
-//  delay(2000); // Tunggu 1 detik sebelum mengukur lagi
+    lcd.print("cm");
+    lcd.setCursor(0,2);
+    lcd.print("hasil lebar:");
+    lcd.print(hasilT);
+    lcd.print("cm");
+    lcd.setCursor(0,3);
+    lcd.print("hasil berat:");
+    //lcd.print(hasilL);
+    //lcd.print("cm");
+    
+    showMonitor();
+
 }
 
 float getDistance(int trigPin, int echoPin) {
@@ -111,20 +80,43 @@ float getDistance(int trigPin, int echoPin) {
 
 void kalkulasi(){
   int panjang = getDistance(trigPin1, echoPin1);
-  int lebar   = getDistance(trigPin1, echoPin1);  
+  int lebar   = getDistance(trigPin2, echoPin2);  
+  int tinggi  = getDistance(trigPin3, echoPin3);  
   
   if(panjang <= referenceLength){
     hasilP = referenceLength - panjang;
   }
+  else{ hasilP = 0; }
+  
   if(lebar <= referenceWidth){
     hasilL = referenceWidth - lebar;
   }
+  else{ hasilL = 0; }
+  
+  if(tinngi <= heightDifference){
+    hasilT = referenceWidth - lebar;
+  }
+  else{ hasilT = 0; }
+
+  length = panjang;
+  width  = lebar;
+  height = tinggi;
 }
 
-//float getWeight() {
-//  int sensorValue = analogRead(loadCellPin);
-//  float voltage = sensorValue * (5.0 / 1023.0); // Konversi nilai analog ke tegangan
-//  float weight = voltage * 100 / 9.8; // Asumsi hubungan linear antara tegangan dan berat (dengan faktor skala)
-//
-//  return weight;
-//}
+void showMonitor(){
+  Serial.print(" Panjang: ");
+  Serial.println(length);
+  Serial.println(" cm");
+
+  Serial.print(" Lebar: ");
+  Serial.println(width);
+  Serial.println(" cm");
+
+  Serial.print(" Tinggi: ");
+  Serial.print(height);
+  Serial.println(" cm");
+
+  Serial.print("Berat: ");
+  Serial.print(weight);
+  Serial.println(" kg");
+}
