@@ -2,7 +2,13 @@
 #include <LiquidCrystal_I2C.h>
 #include <DFRobot_HX711.h>
 #include <HCSR04.h>
+#include "HX711.h"
 
+HX711 scale(6, 5); //HX711 scale(6, 5);
+
+float calibration_factor = -9;
+float units;
+float ounces;
 HCSR04 hc(5, new int[3]{6, 7, 8}, 3); //initialisation class HCSR04 (trig pin , echo pin, number of sensor)
 
 DFRobot_HX711 BERAT(A2, A3);
@@ -30,11 +36,14 @@ const float maxHeight = 50.0; // Batas Tinggi maksimal dalam cm
 const float maxWeight = 5.0; // Batas berat maksimal dalam kg
 
 int hasilP,hasilL,hasilT=0;
-int length,height,width,weight;
+int length,height,width;
+float weight;
 
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
   lcd.begin(); 
+  scale.set_scale(calibration_factor);
+  scale.tare();
   lcd.backlight();
   lcd.setCursor(0,0);
  
@@ -48,6 +57,7 @@ void setup() {
 long berat;
 void loop() {
     kalkulasi();
+    weight = getWeight();
     lcd.setCursor(0,0);
     lcd.print("hasil panjang:");
     lcd.print(hasilP);
@@ -62,8 +72,8 @@ void loop() {
     lcd.print("cm");
     lcd.setCursor(0,3);
     lcd.print("hasil berat:");
-    //lcd.print(hasilL);
-    //lcd.print("cm");
+    Serial.print(weight);
+    Serial.println(" grams");
     
     showMonitor();
 
@@ -126,4 +136,16 @@ void showMonitor(){
   Serial.print("Berat: ");
   Serial.print(weight);
   Serial.println(" kg");
+}
+
+float getWeight(){
+  
+  units = scale.get_units(),10;
+  if (units < 0)
+  {
+    units = 0.00;
+  }
+  ounces = units * 0.035274;
+  
+  return units;
 }
