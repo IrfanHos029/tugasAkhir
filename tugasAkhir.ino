@@ -1,3 +1,8 @@
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
 const int trigPin1 = 9;  // Pin trigger sensor ultrasonik 1 (panjang)
 const int echoPin1 = 10; // Pin echo sensor ultrasonik 1 (panjang)
 
@@ -20,6 +25,12 @@ const float maxWeight = 5.0; // Batas berat maksimal dalam kg
 
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
+  lcd.init(); 
+  lcd.backlight();
+  lcd.setCursor(10,0);
+  lcd.print("Setup!");
+  lcd.setCursor(0,1);
+  lcd.print("one!"); 
   pinMode(trigPin1, OUTPUT);
   pinMode(echoPin1, INPUT);
   pinMode(trigPin2, OUTPUT);
