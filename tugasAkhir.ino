@@ -15,6 +15,7 @@ DFRobot_HX711 BERAT(A2, A3);
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
+#define buzzer 10
 //const int trigPin1 = 9;  // Pin trigger sensor ultrasonik 1 (panjang)
 //const int echoPin1 = 8;//10; // Pin echo sensor ultrasonik 1 (panjang)
 //
@@ -38,7 +39,8 @@ const float maxWeight = 5.0; // Batas berat maksimal dalam kg
 int hasilP,hasilL,hasilT=0;
 int length,height,width;
 float weight;
-
+bool runObject = false;
+int trigger;
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
   lcd.begin(); 
@@ -46,7 +48,8 @@ void setup() {
   scale.tare();
   lcd.backlight();
   lcd.setCursor(0,0);
- 
+   pinMode(buzzer, OUTPUT);
+   trigger=1;
 //  pinMode(trigPin1, OUTPUT);
 //  pinMode(echoPin1, INPUT);
 //  pinMode(trigPin2, OUTPUT);
@@ -56,8 +59,15 @@ void setup() {
 }
 long berat;
 void loop() {
-    kalkulasi();
-    weight = getWeight();
+  
+    weight = getWeight(trigger);
+    if( runObject == 1 ) kalkulasi();
+   
+    showMonitor();
+
+}
+
+void showLCD(){
     lcd.setCursor(0,0);
     lcd.print("hasil panjang:");
     lcd.print(hasilP);
@@ -72,34 +82,71 @@ void loop() {
     lcd.print("cm");
     lcd.setCursor(0,3);
     lcd.print("hasil berat:");
-    Serial.print(weight);
-    Serial.println(" grams");
-    
-    showMonitor();
-
+    lcd.print(weight);
+    lcd.print(" grams");
 }
 
-//float getDistance(int trigPin, int echoPin) {
-//  digitalWrite(trigPin, LOW);
-//  delayMicroseconds(2);
-//  digitalWrite(trigPin, HIGH);
-//  delayMicroseconds(10);
-//  digitalWrite(trigPin, LOW);
+//void kalkulasi(){
+//  int panjang = hc.dist(0);
+//  delay(60);
+//  int lebar   = hc.dist(1); 
+//  delay(60);
+//  int tinggi  = hc.dist(2);
+//  delay(60); 
+//  
+//  if(panjang <= referenceLength){
+//    hasilP = referenceLength - panjang;
+//  }
+//  else{ hasilP = 0; }
+//  
+//  if(lebar <= referenceWidth){
+//    hasilL = referenceWidth - lebar;
+//  }
+//  else{ hasilL = 0; }
+//  
+//  if(tinggi <= referenceHeight){
+//    hasilT = referenceHeight - lebar;
+//  }
+//  else{ hasilT = 0; }
 //
-//  float duration = pulseIn(echoPin, HIGH);
-//  float distance = duration * 0.034 / 2; // Rumus jarak dari waktu
-//
-//  return distance;
+//  length = panjang;
+//  width  = lebar;
+//  height = tinggi;
 //}
 
 void kalkulasi(){
-  int panjang = hc.dist(0);
-  delay(60);
-  int lebar   = hc.dist(1); 
-  delay(60);
-  int tinggi  = hc.dist(2);
-  delay(60); 
+  // check RunSelector
+  //if(!dwDo(Run)) return;
+  unsigned long tmr = millis();
+  static unsigned long saveTmr1=0;
+  static unsigned long saveTmr2=0;
+  static byte timeRead,x=0;
+  int panjang,lebar,tinggi;
   
+  switch(x){
+    case 0 :
+      panjang = hc.dist(0);
+      break;
+    case 1 :
+      lebar   = hc.dist(1);
+      break;
+    case 2 :
+      tinggi  = hc.dist(2);
+      break;
+    case 3 :
+      x = 0;
+      break;
+  };
+  if(tmr - saveTmr1 > 60){
+    saveTmr1 = tmr;
+    x++;
+  }
+  
+ if(tmr - saveTmr2 > 100){
+  saveTmr2 = tmr;
+  timeRead++;
+ }
+  if(timeRead >= 1000){ trigger = 0; runObject = 0; }//buzzer(1); delay(1000); buzzer(0);
   if(panjang <= referenceLength){
     hasilP = referenceLength - panjang;
   }
@@ -135,17 +182,37 @@ void showMonitor(){
 
   Serial.print("Berat: ");
   Serial.print(weight);
-  Serial.println(" kg");
+  Serial.println(" gram");
+
+  Serial.print("trigger: ");
+  Serial.print(trigger);
+
+  Serial.print("runObject: ");
+  Serial.print(runObject);
+  
 }
 
-float getWeight(){
-  
+float getWeight(int Run){
+  if(!dwDo(Run)) return;
   units = scale.get_units(),10;
   if (units < 0)
   {
     units = 0.00;
   }
+  if(units > 0){
+    runObject = 1;
+  }
+ // else{ runObject = 0; }
   ounces = units * 0.035274;
   
   return units;
 }
+
+void buzzerRun(int flag){
+  if(flag){digitalWrite(buzzer,HIGH); }
+  else{ digitalWrite(buzzer,LOW); }
+}
+
+boolean dwDo(int DrawAdd)
+  { if (trigger== DrawAdd) {return true;}
+    else return false;}
