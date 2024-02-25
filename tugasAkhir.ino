@@ -1,118 +1,124 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
-#include <DFRobot_HX711.h>
+//#include <DFRobot_HX711.h>
 #include <HCSR04.h>
 #include "HX711.h"
 
-HX711 scale(6, 5); //HX711 scale(6, 5);
+HX711 scale(A2, A3); //HX711 scale(6, 5);
 
 float calibration_factor = -9;
 float units;
 float ounces;
+
+/*
+ * pin Trigger ultrasonik : 5
+ * pin Echo ultrasonik 1  : 6
+ * pin Echo ultrasonik 2  : 7
+ * pin Echo ultrasonik 3  : 8
+ */
+ 
 HCSR04 hc(5, new int[3]{6, 7, 8}, 3); //initialisation class HCSR04 (trig pin , echo pin, number of sensor)
 
-DFRobot_HX711 BERAT(A2, A3);
+//DFRobot_HX711 BERAT(A2, A3);
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 #define buzzer 10
-//const int trigPin1 = 9;  // Pin trigger sensor ultrasonik 1 (panjang)
-//const int echoPin1 = 8;//10; // Pin echo sensor ultrasonik 1 (panjang)
-//
-//const int trigPin2 = 7;//11; // Pin trigger sensor ultrasonik 2 (lebar)
-//const int echoPin2 = 6;//12; // Pin echo sensor ultrasonik 2 (lebar)
-//
-//const int trigPin3 = 13; // Pin trigger sensor ultrasonik 3 (tinggi)
-//const int echoPin3 = A0; // Pin echo sensor ultrasonik 3 (tinggi)
 
-//const int loadCellPin = A1; // Pin load cell
 
-const float referenceLength = 50.0; // Panjang referensi dalam cm
-const float referenceWidth = 50.0;  // Lebar referensi dalam cm
-const float referenceHeight = 50.0; // Tinggi referensi dalam cm
+const int referenceLength = 50; // Panjang referensi dalam cm
+const int referenceWidth = 50;  // Lebar referensi dalam cm
+const int referenceHeight = 50; // Tinggi referensi dalam cm
 const float referenceWeight = 5.0; // Berat referensi dalam kg
 const float maxLength = 50.0; // Batas Panjang maksimal dalam cm
 const float maxWidth = 50.0; // Batas Lebar maksimal dalam cm
 const float maxHeight = 50.0; // Batas Tinggi maksimal dalam cm
 const float maxWeight = 5.0; // Batas berat maksimal dalam kg
 
-int hasilP,hasilL,hasilT=0;
+int hasilP,hasilL,hasilT;
 int length,height,width;
 float weight;
-bool runObject = false;
-int trigger;
+bool runObject = true;
+bool trigger   =false;
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
   lcd.begin(); 
   scale.set_scale(calibration_factor);
   scale.tare();
   lcd.backlight();
-  lcd.setCursor(0,0);
-   pinMode(buzzer, OUTPUT);
-   trigger=1;
-//  pinMode(trigPin1, OUTPUT);
-//  pinMode(echoPin1, INPUT);
-//  pinMode(trigPin2, OUTPUT);
-//  pinMode(echoPin2, INPUT);
-//  pinMode(trigPin3, OUTPUT);
-//  pinMode(echoPin3, INPUT);
+  pinMode(buzzer, OUTPUT);
+   
+
 }
 long berat;
 void loop() {
-  
-    weight = getWeight(trigger);
-    if( runObject == 1 ) kalkulasi();
    
-    showMonitor();
-
+    weight = getWeight();
+    
+    kalkulasi();
+   
+    
 }
 
 void showLCD(){
+  
     lcd.setCursor(0,0);
-    lcd.print("hasil panjang:");
-    lcd.print(hasilP);
-    lcd.print("cm");
+    lcd.print("panjang:");
+    lcd.print((hasilP >= 50)? 0 : hasilP);
+    lcd.setCursor(13,0);
+    lcd.print(" cm");
+    
     lcd.setCursor(0,1);
-    lcd.print("hasil lebar:");
-    lcd.print(hasilL);
-    lcd.print("cm");
+    lcd.print("lebar  :");
+    lcd.print((hasilL >= 50)? 0 : hasilL);
+    lcd.setCursor(13,1);
+    lcd.print(" cm");
+    
     lcd.setCursor(0,2);
-    lcd.print("hasil lebar:");
-    lcd.print(hasilT);
-    lcd.print("cm");
+    lcd.print("tinggi :");
+    lcd.print((hasilT >= 50)? 0 : hasilT);
+    lcd.setCursor(13,2);
+    lcd.print(" cm");
+    
     lcd.setCursor(0,3);
-    lcd.print("hasil berat:");
-    lcd.print(weight);
-    lcd.print(" grams");
+    lcd.print("berat:");
+    lcd.print((weight >= 1000)? weight / 1000 :  weight);
+    lcd.setCursor(13,3);
+    lcd.print((weight >= 1000)? "Gram" : "KG");
 }
+/*
+void kalkulasi(){
+  int panjang = 0;//hc.dist(0);
+  //delay(60);
+  int lebar   = 0;//hc.dist(1); 
+  delay(60);
+  int tinggi  = hc.dist(2);
+  delay(60); 
+  
+  if(panjang <= referenceLength){
+    hasilP = referenceLength - panjang;
+  }
+  else{ hasilP = 0; }
+  
+  if(lebar <= referenceWidth){
+    hasilL = referenceWidth - lebar;
+  }
+  else{ hasilL = 0; }
+  
+  if(tinggi <= referenceHeight){
+    hasilT = 50 - tinggi;
+  }
+  //else{ hasilT = 0; }
+  lcd.setCursor(0,2);
+    lcd.print("tinggi:");
+    lcd.print((hasilT >= 50)? 0 : hasilT);
+     lcd.setCursor(13,2);
+    lcd.print(" cm");
 
-//void kalkulasi(){
-//  int panjang = hc.dist(0);
-//  delay(60);
-//  int lebar   = hc.dist(1); 
-//  delay(60);
-//  int tinggi  = hc.dist(2);
-//  delay(60); 
-//  
-//  if(panjang <= referenceLength){
-//    hasilP = referenceLength - panjang;
-//  }
-//  else{ hasilP = 0; }
-//  
-//  if(lebar <= referenceWidth){
-//    hasilL = referenceWidth - lebar;
-//  }
-//  else{ hasilL = 0; }
-//  
-//  if(tinggi <= referenceHeight){
-//    hasilT = referenceHeight - lebar;
-//  }
-//  else{ hasilT = 0; }
-//
-//  length = panjang;
-//  width  = lebar;
-//  height = tinggi;
-//}
+  length = panjang;
+  width  = lebar;
+  height = tinggi;
+}*/
 
 void kalkulasi(){
   // check RunSelector
@@ -121,7 +127,11 @@ void kalkulasi(){
   static unsigned long saveTmr1=0;
   static unsigned long saveTmr2=0;
   static byte timeRead,x=0;
-  int panjang,lebar,tinggi;
+  static int panjang,lebar,tinggi;
+  static bool flag=false;
+  
+  if(tmr - saveTmr1 > 60 && trigger == true){
+    saveTmr1 = tmr;
   
   switch(x){
     case 0 :
@@ -137,82 +147,98 @@ void kalkulasi(){
       x = 0;
       break;
   };
-  if(tmr - saveTmr1 > 60){
-    saveTmr1 = tmr;
     x++;
+  
+
   }
   
- if(tmr - saveTmr2 > 100){
+ if(tmr - saveTmr2 > 50 && trigger == true){
   saveTmr2 = tmr;
-  timeRead++;
- }
-  if(timeRead >= 1000){ trigger = 0; runObject = 0; }//buzzer(1); delay(1000); buzzer(0);
-  if(panjang <= referenceLength){
+  
+ 
+  if(timeRead <= 100){
+    timeRead++;
+    if(panjang <= referenceLength){
     hasilP = referenceLength - panjang;
   }
-  else{ hasilP = 0; }
+  
   
   if(lebar <= referenceWidth){
     hasilL = referenceWidth - lebar;
   }
-  else{ hasilL = 0; }
+  
   
   if(tinggi <= referenceHeight){
-    hasilT = referenceHeight - lebar;
+    hasilT = referenceHeight - tinggi;
   }
-  else{ hasilT = 0; }
-
+ 
+  showMonitor();
+  }
+  else{ hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; flag=1;}
+ 
+ }
+ while(weight >= 1000){lcd.clear(); break;}
+ while(weight < 1000){lcd.clear(); break;}
+ showLCD();
   length = panjang;
   width  = lebar;
   height = tinggi;
 }
-
 void showMonitor(){
-  Serial.print("Panjang: ");
-  Serial.print(length);
-  Serial.println(" cm");
+//  Serial.print("Panjang: ");
+//  Serial.print(length);
+//  Serial.println(" cm");
+//
+//  Serial.print("Lebar: ");
+//  Serial.print(width);
+//  Serial.println(" cm");
+//
+//  Serial.print("Tinggi: ");
+//  Serial.print(height);
+//  Serial.println(" cm");
 
-  Serial.print("Lebar: ");
-  Serial.print(width);
-  Serial.println(" cm");
 
-  Serial.print("Tinggi: ");
-  Serial.print(height);
-  Serial.println(" cm");
-
+  Serial.print("Berat: ");
+  Serial.print((weight >= 1000)? weight / 1000 : weight);
+  Serial.println(" KG");
+  
   Serial.print("Berat: ");
   Serial.print(weight);
   Serial.println(" gram");
 
-  Serial.print("trigger: ");
-  Serial.print(trigger);
-
-  Serial.print("runObject: ");
-  Serial.print(runObject);
+//  Serial.print("trigger: ");
+//  Serial.println(trigger);
+//
+//  Serial.print("runObject: ");
+//  Serial.println(runObject);
   
 }
 
-float getWeight(int Run){
-  if(!dwDo(Run)) return;
-  units = scale.get_units(),10;
+float getWeight(){
+ 
+  unsigned long tmr = millis();
+  static unsigned long saveTmr=0;
+
+  if(tmr - saveTmr > 1000 && runObject == true){
+  saveTmr = tmr;
+// Serial.println("run ");
+  units = scale.get_units(),3;
   if (units < 0)
   {
     units = 0.00;
   }
   if(units > 0){
-    runObject = 1;
+    trigger = true;
   }
- // else{ runObject = 0; }
-  ounces = units * 0.035274;
   
+ // else{ runObject = 0; }
+ // ounces = units * 0.035274;
+  Serial.print("run ");
   return units;
+  }
 }
 
 void buzzerRun(int flag){
   if(flag){digitalWrite(buzzer,HIGH); }
   else{ digitalWrite(buzzer,LOW); }
 }
-
-boolean dwDo(int DrawAdd)
-  { if (trigger== DrawAdd) {return true;}
-    else return false;}
