@@ -3,10 +3,10 @@
 #include <HCSR04.h>
 #include "HX711.h"
 
-HX711 scale(A2, A3); 
+HX711 scale(11, 10); 
 
 float calibration_factor = -9; //rubah nilai ini sesuai hasil dari nilai kalibrasi
-float units;
+
 float ounces;
 
 /*
@@ -38,6 +38,7 @@ float weight;
 bool runObject = true;
 bool trigger   =false;
 char *textWeight[]{" Gram"," KG  "};
+ bool stateTimerLCD=true;
 
 byte zero[] = {
   B00000,
@@ -114,7 +115,11 @@ byte speaker[] = {
   B00110,
   B00010
 };
-
+int flagTr=1;
+ int timerFlag;
+ int flagFsh=0;;
+ int stateRnn=1;
+ float units=-1;
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
   lcd.begin(); 
@@ -130,25 +135,44 @@ void setup() {
   lcd.createChar(5, five);
   lcd.createChar(6, speaker);
 
-  for(int i = 0; i < 100; i++){
-    lcd.setCursor(0,0);
-    lcd.print("LOADING..");
-    lcd.setCursor(16,0);
-    lcd.print(i);
-    lcd.print("%");
-    updateProgressBar(i, 100, 1);
-    delay(50);
-  }
+//  for(int i = 0; i < 100; i++){
+//    lcd.setCursor(0,0);
+//    lcd.print("LOADING..");
+//    lcd.setCursor(16,0);
+//    lcd.print(i);
+//    lcd.print("%");
+//    updateProgressBar(i, 100, 1);
+//    delay(50);
+//  }
   lcd.clear();
+  Serial.println("build run");
 }
-//long berat;
+
 void loop() {
    
     weight = getWeight();
     
     kalkulasi();
    showLCD();
-    
+   
+   if(trigger == false && flagTr == 1 && flagFsh == 0){
+    Serial.print("timerFlag:");
+    Serial.println(timerFlag);
+    while(timerFlag>=20){
+      timerLCD(0,1);
+      break;
+    }
+  }
+  
+   
+//  else{
+//    
+//    timerLCD(0);
+//  }
+//      Serial.print("trigger: ");
+//  Serial.println(trigger);
+//    Serial.print("falgTr: ");
+//  Serial.println(flagTr);
 }
 
 void updateProgressBar(unsigned long count, unsigned long totalCount, int lineToPrintOn)
@@ -177,7 +201,8 @@ void updateProgressBar(unsigned long count, unsigned long totalCount, int lineTo
     }  
  }
 void showLCD(){
-  
+    
+    if(flagTr==true){
     lcd.setCursor(0,0);
     lcd.print("Panjang:");
     lcd.print((hasilP >= 50)? 0 : hasilP);
@@ -214,7 +239,8 @@ void showLCD(){
         lcd.setCursor(19,3);
         lcd.print(" ");
     }
-   
+    }
+    else{lcd.clear();}
 }
 /*
 void kalkulasi(){
@@ -304,7 +330,7 @@ void kalkulasi(){
  
   showMonitor();
   }
-  else{ hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; }
+  else{ hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; flagFsh=1;}
  
  }
  
@@ -317,32 +343,32 @@ void kalkulasi(){
   height = tinggi;
 }
 void showMonitor(){
-  Serial.print("Panjang: ");
-  Serial.print(length);
-  Serial.println(" cm");
-
-  Serial.print("Lebar: ");
-  Serial.print(width);
-  Serial.println(" cm");
-
-  Serial.print("Tinggi: ");
-  Serial.print(height);
-  Serial.println(" cm");
-
-
-  Serial.print("Berat: ");
-  Serial.print((weight >= 1000)? weight / 1000 : weight);
-  Serial.println(" KG");
-  
-  Serial.print("Berat: ");
-  Serial.print(weight);
-  Serial.println(" gram");
-
-//  Serial.print("trigger: ");
-//  Serial.println(trigger);
+//  Serial.print("Panjang: ");
+//  Serial.print(length);
+//  Serial.println(" cm");
 //
-//  Serial.print("runObject: ");
-//  Serial.println(runObject);
+//  Serial.print("Lebar: ");
+//  Serial.print(width);
+//  Serial.println(" cm");
+//
+//  Serial.print("Tinggi: ");
+//  Serial.print(height);
+//  Serial.println(" cm");
+
+
+//  Serial.print("Berat: ");
+//  Serial.print((weight >= 1000)? weight / 1000 : weight);
+//  Serial.println(" KG");
+//  
+//  Serial.print("Berat: ");
+//  Serial.print(weight);
+//  Serial.println(" gram");
+
+  Serial.print("trigger: ");
+  Serial.println(trigger);
+
+  Serial.print("runObject: ");
+  Serial.println(runObject);
   
 }
 
@@ -350,25 +376,70 @@ float getWeight(){
  
   unsigned long tmr = millis();
   static unsigned long saveTmr=0;
-
-  if(tmr - saveTmr > 1000 && runObject == true){
+ static int flagR=0;
+ 
+  if(tmr - saveTmr > 1000 && runObject == true  ){
   saveTmr = tmr;
 // Serial.println("run ");
   units = scale.get_units(),3;
-  if (units < 0)
+  if (units < 0 )
   {
-    units = 0.00;
+    units = 0.00; 
   }
-  if(units > 0){
-    trigger = true;
-  }
-  
- // else{ runObject = 0; }
+  if(units <= 0 && stateRnn == 1){ timerLCD(1,1); }
  // ounces = units * 0.035274;
-  Serial.print("run ");
+ // Serial.println("run ");
+ if(units > 1000){
+    trigger = true;
+    flagTr=1;;
+    timerLCD(0,0);
+  }
   return units;
   }
+  
+  
 }
+ 
+//void timerLCD(i){
+//  unsigned long tmr = millis();
+//  static unsigned long saveTmr;
+//  static int timerFlag;
+//  //static  int flag1=1;
+//  if(tmr - saveTmr > 50 && flagTr == true && trigger != true){
+//    saveTmr = tmr;
+//    
+//    Serial.println("tmr run ");
+//    if(timerFlag <= 100){  timerFlag++; stateTimerLCD = true;Serial.println(String() + "stateTimerLCD:" + stateTimerLCD); }
+//    else{ timerFlag=0; stateTimerLCD=false; flagTr == false; Serial.println(String() + "stateTimerLCD:" + stateTimerLCD);}
+//  }
+//  
+//  
+//}
+void timerLCD(int state,int runn){
+  unsigned long tmr = millis();
+  static unsigned long saveTmr;
+  //static int timerFlag;
+  //static  int flag1=1;
+  if(tmr - saveTmr > 50 && state == 1 && runn){
+    saveTmr = tmr;
+    timerFlag++;
+    flagTr=1;
+    stateRnn = 1;
+    Serial.println("tmr run ");
+  }
+  else{
+    saveTmr = 0;
+    timerFlag=0;
+    if(runn){flagTr=0;}
+    stateRnn = 0;
+    //timerLCD(0);
+  }
+
+  
+  
+}
+
+
 
 void buzzerRun(int flag){
   if(flag){digitalWrite(buzzer,HIGH); }
