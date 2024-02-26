@@ -3,42 +3,51 @@
 #include <HCSR04.h>
 #include "HX711.h"
 
-HX711 scale(11, 10); 
+HX711 scale(6, 7); 
 
 float calibration_factor = -9; //rubah nilai ini sesuai hasil dari nilai kalibrasi
 
-float ounces;
+
 
 /*
  * pin Trigger ultrasonik : 5
- * pin Echo ultrasonik 1  : 6
- * pin Echo ultrasonik 2  : 7
- * pin Echo ultrasonik 3  : 8
+ * pin Echo ultrasonik 1  : 2
+ * pin Echo ultrasonik 2  : 3
+ * pin Echo ultrasonik 3  : 4
  */
  
-HCSR04 hc(5, new int[3]{6, 7, 8}, 3); //initialisation class HCSR04 (trig pin , echo pin, number of sensor)
+HCSR04 hc(5, new int[3]{2, 3, 4}, 3); //initialisation class HCSR04 (trig pin , echo pin, number of sensor)
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 20 chars and 4 line display
 
-#define buzzer 10
+#define buzzer 11
+#define buttonReset 12
 
+int   hasilP,hasilL,hasilT;
+int   length,height,width;
+float weight;
+bool  runObject = true;
+bool  trigger   = false;
+char  *textWeight[]{" Gram"," KG  "};
+
+bool  flagTr  = true;
+int   timerFlag;
+int   timeRead;
+bool  flagFsh = false;
+bool  stateRun= true;
+float units   =-1;
+float ounces;
 
 const int referenceLength = 50; // Panjang referensi dalam cm
-const int referenceWidth = 50;  // Lebar referensi dalam cm
+const int referenceWidth  = 50;  // Lebar referensi dalam cm
 const int referenceHeight = 50; // Tinggi referensi dalam cm
-const float referenceWeight = 5.0; // Berat referensi dalam kg
-const float maxLength = 50.0; // Batas Panjang maksimal dalam cm
-const float maxWidth = 50.0; // Batas Lebar maksimal dalam cm
-const float maxHeight = 50.0; // Batas Tinggi maksimal dalam cm
-const float maxWeight = 5.0; // Batas berat maksimal dalam kg
+const int referenceWeight = 5.0; // Berat referensi dalam kg
+//const float maxLength = 50.0; // Batas Panjang maksimal dalam cm
+//const float maxWidth = 50.0; // Batas Lebar maksimal dalam cm
+//const float maxHeight = 50.0; // Batas Tinggi maksimal dalam cm
+//const float maxWeight = 5.0; // Batas berat maksimal dalam kg
 
-int hasilP,hasilL,hasilT;
-int length,height,width;
-float weight;
-bool runObject = true;
-bool trigger   =false;
-char *textWeight[]{" Gram"," KG  "};
- bool stateTimerLCD=true;
+
 
 byte zero[] = {
   B00000,
@@ -115,11 +124,7 @@ byte speaker[] = {
   B00110,
   B00010
 };
-int flagTr=1;
- int timerFlag;
- int flagFsh=0;;
- int stateRnn=1;
- float units=-1;
+
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
   lcd.begin(); 
@@ -127,6 +132,7 @@ void setup() {
   scale.tare();
   lcd.backlight();
   pinMode(buzzer, OUTPUT);
+  pinMode(buttonReset,INPUT_PULLUP);
   lcd.createChar(0, zero);
   lcd.createChar(1, one);
   lcd.createChar(2, two);
@@ -153,7 +159,7 @@ void loop() {
     weight = getWeight();
     
     kalkulasi();
-   showLCD();
+    showLCD();
    
    if(trigger == false && flagTr == 1 && flagFsh == 0){
     Serial.print("timerFlag:");
@@ -162,30 +168,20 @@ void loop() {
       timerLCD(0,1);
       break;
     }
-  }
-  
-   
-//  else{
-//    
-//    timerLCD(0);
-//  }
-//      Serial.print("trigger: ");
-//  Serial.println(trigger);
-//    Serial.print("falgTr: ");
-//  Serial.println(flagTr);
+   }
 }
 
 void updateProgressBar(unsigned long count, unsigned long totalCount, int lineToPrintOn)
  {
-    double factor = totalCount/100.0;          //See note above!
-    int percent = (count+1)/factor;
-    int number = percent/5;
-    int remainder = percent%5;
+    double factor    = totalCount/100.0;          //See note above!
+    int    percent   = (count+1)/factor;
+    int    number    = percent/5;
+    int    remainder = percent%5;
     if(number > 0)
     {
       for(int j = 0; j < number; j++)
       {
-        lcd.setCursor(j,lineToPrintOn);
+       lcd.setCursor(j,lineToPrintOn);
        lcd.write(5);
       }
     }
@@ -200,9 +196,11 @@ void updateProgressBar(unsigned long count, unsigned long totalCount, int lineTo
       }
     }  
  }
+ 
 void showLCD(){
     
     if(flagTr==true){
+    lcd.noBacklight();
     lcd.setCursor(0,0);
     lcd.print("Panjang:");
     lcd.print((hasilP >= 50)? 0 : hasilP);
@@ -221,7 +219,6 @@ void showLCD(){
     lcd.setCursor(13,2);
     lcd.print(" cm");
 
-    
     lcd.setCursor(0,3);
     lcd.print("Berat  :");
     lcd.print((weight >= 1000)? weight / 1000 :  weight);
@@ -240,7 +237,7 @@ void showLCD(){
         lcd.print(" ");
     }
     }
-    else{lcd.clear();}
+    else{lcd.noBacklight(); lcd.clear();}
 }
 /*
 void kalkulasi(){
@@ -277,15 +274,13 @@ void kalkulasi(){
 }*/
 
 void kalkulasi(){
-  // check RunSelector
-  //if(!dwDo(Run)) return;
-  unsigned long tmr = millis();
-  static unsigned long saveTmr1=0;
-  static unsigned long saveTmr2=0;
-  static byte timeRead,x=0;
-  static int panjang,lebar,tinggi;
- // static bool flag=false;
-  //static byte flagWeight;
+  
+  unsigned long        tmr = millis();
+  static unsigned long saveTmr1 = 0;
+  static unsigned long saveTmr2 = 0;
+  static int           x = 0;
+  static int           panjang,lebar,tinggi;
+ 
   if(tmr - saveTmr1 > 60 && trigger == true){
     saveTmr1 = tmr;
   
@@ -330,14 +325,8 @@ void kalkulasi(){
  
   showMonitor();
   }
-  else{ hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; flagFsh=1;}
- 
+  else{lcd.noBacklight(); delay(10); lcd.backlight(); hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; flagFsh=true;}
  }
- 
-// if(weight >= 1000){flagWeight=1;}
-// else{flagWeight=0;}
-// 
- 
   length = panjang;
   width  = lebar;
   height = tinggi;
@@ -376,7 +365,6 @@ float getWeight(){
  
   unsigned long tmr = millis();
   static unsigned long saveTmr=0;
- static int flagR=0;
  
   if(tmr - saveTmr > 1000 && runObject == true  ){
   saveTmr = tmr;
@@ -386,18 +374,16 @@ float getWeight(){
   {
     units = 0.00; 
   }
-  if(units <= 0 && stateRnn == 1){ timerLCD(1,1); }
+  if(units <= 0 && stateRun == 1){ timerLCD(1,1); }
  // ounces = units * 0.035274;
- // Serial.println("run ");
+ 
  if(units > 1000){
     trigger = true;
-    flagTr=1;;
+    flagTr  = true;
     timerLCD(0,0);
   }
   return units;
   }
-  
-  
 }
  
 //void timerLCD(i){
@@ -415,33 +401,44 @@ float getWeight(){
 //  
 //  
 //}
-void timerLCD(int state,int runn){
+void timerLCD(bool state,bool stateLCD){
   unsigned long tmr = millis();
   static unsigned long saveTmr;
-  //static int timerFlag;
-  //static  int flag1=1;
-  if(tmr - saveTmr > 50 && state == 1 && runn){
+  
+  if(tmr - saveTmr > 50 && state == true && stateLCD == true){
     saveTmr = tmr;
     timerFlag++;
     flagTr=1;
-    stateRnn = 1;
+    stateRun = 1;
     Serial.println("tmr run ");
   }
   else{
     saveTmr = 0;
     timerFlag=0;
-    if(runn){flagTr=0;}
-    stateRnn = 0;
+    if(stateLCD){flagTr=0;}
+    stateRun = 0;
     //timerLCD(0);
-  }
-
-  
-  
+  } 
 }
 
-
-
-void buzzerRun(int flag){
+void buzzerRun(bool flag){
   if(flag){digitalWrite(buzzer,HIGH); }
   else{ digitalWrite(buzzer,LOW); }
+}
+
+void Button(){
+   byte readReset = digitalRead(buttonReset) == LOW;
+   static byte lockReset = 0;
+   if(readReset == LOW && lockReset == 0){
+    lockReset = 1; 
+    lcd.clear();
+    hasilP  = 0; 
+    hasilL  = 0; 
+    hasilT  = 0; 
+    trigger = false; 
+    runObject = true; 
+    timeRead  = 0; 
+    flagFsh   = false;
+    }
+   if(readReset != LOW && lockReset == 1){lockReset = 0; }
 }
