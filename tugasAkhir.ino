@@ -21,7 +21,7 @@ HCSR04 hc(5, new int[3]{2, 3, 4}, 3); //initialisation class HCSR04 (trig pin , 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 20 chars and 4 line display
 
 #define buzzer 11
-#define buttonReset 12
+#define buttonReset 10
 
 int   hasilP,hasilL,hasilT;
 int   length,height,width;
@@ -127,7 +127,7 @@ byte speaker[] = {
 
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
-  lcd.begin(); 
+  lcd.init(); 
   scale.set_scale(calibration_factor);
   scale.tare();
   lcd.backlight();
@@ -141,15 +141,15 @@ void setup() {
   lcd.createChar(5, five);
   lcd.createChar(6, speaker);
 
-//  for(int i = 0; i < 100; i++){
-//    lcd.setCursor(0,0);
-//    lcd.print("LOADING..");
-//    lcd.setCursor(16,0);
-//    lcd.print(i);
-//    lcd.print("%");
-//    updateProgressBar(i, 100, 1);
-//    delay(50);
-//  }
+  for(int i = 0; i < 100; i++){
+    lcd.setCursor(0,0);
+    lcd.print("LOADING..");
+    lcd.setCursor(16,0);
+    lcd.print(i);
+    lcd.print("%");
+    updateProgressBar(i, 100, 1);
+    delay(50);
+  }
   lcd.clear();
   Serial.println("build run");
 }
@@ -160,11 +160,11 @@ void loop() {
     
     kalkulasi();
     showLCD();
-   
+   Button();
    if(trigger == false && flagTr == 1 && flagFsh == 0){
     Serial.print("timerFlag:");
     Serial.println(timerFlag);
-    while(timerFlag>=20){
+    while(timerFlag>55){
       timerLCD(0,1);
       break;
     }
@@ -200,7 +200,7 @@ void updateProgressBar(unsigned long count, unsigned long totalCount, int lineTo
 void showLCD(){
     
     if(flagTr==true){
-    lcd.noBacklight();
+    lcd.backlight();
     lcd.setCursor(0,0);
     lcd.print("Panjang:");
     lcd.print((hasilP >= 50)? 0 : hasilP);
@@ -229,12 +229,14 @@ void showLCD(){
         lcd.print("!");
         lcd.setCursor(19,3);
         lcd.write(6);
+        if(runObject)buzzerRun(1); 
     }
     else{
         lcd.setCursor(18,3);
         lcd.print(" ");
         lcd.setCursor(19,3);
         lcd.print(" ");
+        buzzerRun(0);
     }
     }
     else{lcd.noBacklight(); lcd.clear();}
@@ -307,7 +309,7 @@ void kalkulasi(){
   saveTmr2 = tmr;
   
  
-  if(timeRead <= 100){
+  if(timeRead <= 30){
     timeRead++;
     if(panjang <= referenceLength){
     hasilP = referenceLength - panjang;
@@ -325,7 +327,7 @@ void kalkulasi(){
  
   showMonitor();
   }
-  else{lcd.noBacklight(); delay(10); lcd.backlight(); hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; flagFsh=true;}
+  else{lcd.noBacklight(); buzzerRun(1); delay(50); lcd.backlight(); buzzerRun(0); hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; flagFsh=true;}
  }
   length = panjang;
   width  = lebar;
@@ -427,7 +429,7 @@ void buzzerRun(bool flag){
 }
 
 void Button(){
-   byte readReset = digitalRead(buttonReset) == LOW;
+   byte readReset = digitalRead(buttonReset);
    static byte lockReset = 0;
    if(readReset == LOW && lockReset == 0){
     lockReset = 1; 
@@ -439,6 +441,7 @@ void Button(){
     runObject = true; 
     timeRead  = 0; 
     flagFsh   = false;
+    stateRun  = true;
     }
    if(readReset != LOW && lockReset == 1){lockReset = 0; }
 }
