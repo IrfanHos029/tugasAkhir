@@ -127,7 +127,8 @@ byte speaker[] = {
 
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
-  lcd.init(); 
+  //lcd.init(); 
+  lcd.begin();
   scale.set_scale(calibration_factor);
   scale.tare();
   lcd.backlight();
@@ -241,6 +242,7 @@ void showLCD(){
     }
     else{lcd.noBacklight(); lcd.clear();}
 }
+
 /*
 void kalkulasi(){
   int panjang = 0;//hc.dist(0);
@@ -388,21 +390,6 @@ float getWeight(){
   }
 }
  
-//void timerLCD(i){
-//  unsigned long tmr = millis();
-//  static unsigned long saveTmr;
-//  static int timerFlag;
-//  //static  int flag1=1;
-//  if(tmr - saveTmr > 50 && flagTr == true && trigger != true){
-//    saveTmr = tmr;
-//    
-//    Serial.println("tmr run ");
-//    if(timerFlag <= 100){  timerFlag++; stateTimerLCD = true;Serial.println(String() + "stateTimerLCD:" + stateTimerLCD); }
-//    else{ timerFlag=0; stateTimerLCD=false; flagTr == false; Serial.println(String() + "stateTimerLCD:" + stateTimerLCD);}
-//  }
-//  
-//  
-//}
 void timerLCD(bool state,bool stateLCD){
   unsigned long tmr = millis();
   static unsigned long saveTmr;
