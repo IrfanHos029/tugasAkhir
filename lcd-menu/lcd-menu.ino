@@ -16,8 +16,9 @@ int buttonPin = 8;
 OneButton button0(buttonPin, true);
 
 ///String menu1[]={"3","setBeban","setJarak","setLed"};
-String menu1[]={"5","kalibrasi Beban","Kalibrasi Jarak","Set Timer LCD","Set Timer Sleep","Back"};
+String menu1[]={"6","kalibrasi Beban","Kalibrasi Jarak","Set Timer LCD","Set Timer Sleep","Set LED","Back"};
 String menuJarak[]={"4","Sensor 1:","Sensor 2:","Sensor 3:","Back"};
+int led[]={8,9,10};
 int currentLength;
 int currentLayer =0;
 int lastLayer=99;
@@ -33,7 +34,11 @@ int valueHeight = 0;
 int flagS=0;
 long newPosition=0;
 int stepLayer=1;
-int lastStep;
+int lastStep,lastSleep;
+int timerLock,timerSleep;
+char *panah[]{" ","<",">"};
+int panahRun,lastLock;
+int merah,biru,hijau;
 /*
  * address  val
  * 0        weight
@@ -50,10 +55,13 @@ Serial.begin(9600);
   lcd.setBacklight(HIGH);
 button0.attachClick(singleClick);
 button0.attachDoubleClick(doubleclick1);
+for(int i=0;i<3;i++){ pinMode(led[i],OUTPUT);}
 parWeight = EEPROM.read(0);
 valueLength = EEPROM.read(1);
 valueWidth = EEPROM.read(2);
 valueHeight = EEPROM.read(3);
+timerLock =  EEPROM.read(4);
+timerSleep =EEPROM.read(5);
 delay(100);
 Serial.println(String() + "parWeight  :" + parWeight);
 Serial.println(String() + "valueLength:" + valueLength);
@@ -92,16 +100,32 @@ void singleClick(){
 
     case 3 :
       clearMenu();
+      subLayer = 3;
+      currentLayer = -1;
+      currentSelect = 1;
+      cursorSelect();
+    break;
+
+    case 4 :
+
+      clearMenu();
+      subLayer = 4;
+      currentLayer = -1;
+      currentSelect = 1;
+      cursorSelect();
+    break;
+
+    case 5 :
+      clearMenu();
       stepLayer = 1;
       currentLayer = 0;
-      
     break;
+    
   };
  }
  
   else if(currentLayer != 1 && subLayer == 1){
   clearMenu();
-  
   subLayer = 0;
   currentLayer = 1;
   currentSelect = 1;
@@ -110,28 +134,41 @@ void singleClick(){
   //EEPROM.commit();
  }
 
+ else if(currentLayer != 1 && subLayer == 3 ){
+      clearMenu();
+      subLayer = 0;
+      currentLayer = 1;
+      currentSelect = 3;
+      cursorSelect();
+      EEPROM.write(4,timerLock);
+    }
+
+  else if(currentLayer != 1 && subLayer == 4 ){//
+      clearMenu();
+      subLayer = 0;
+      currentLayer = 1;
+      currentSelect = 4;
+      cursorSelect();
+      EEPROM.write(5,timerSleep);
+    }
+
+
   if(currentLayer != 1 && subLayer == 2 ){
     
     switch(currentSelect){
     case 1 :
       flagS=!flagS;
       clearMenu();
-     // if(flagS){ EEPROM.write(1,valueLength);}
-      //Serial.println(String() + "falg run 1:" + flagS);
     break;
 
     case 2 :
       flagS=!flagS;
       clearMenu();
-     //  if(flagS){ EEPROM.write(2,valueWidth);}
-      //Serial.println(String() + "falg run 2:" + flagS);
     break;
 
     case 3 :
      flagS=!flagS;
      clearMenu();
-    // if(flagS){ EEPROM.write(3,valueWeight);}
-     //Serial.println(String() + "falg run 3:" + flagS);
     break;
 
    case 4 :
@@ -149,29 +186,9 @@ void singleClick(){
     
   };
    }
-//   else if(currentLayer != 1 && subLayer == 3 ){
-//     currentLayer = 0;
-//   }
 
-   
-//if(currentLayer != 1 && subLayer == 2 && flagS != 0){
-//  switch(flagS){
-//    case 1 :
-//      flagS=0;
-//      Serial.println(String() + "falg run 2:" + flagS);
-//    break;
-//
-//    case 2 :
-//      flagS=0;
-//      //currentLayer++;
-//    break;
-//
-//    case 3 :
-//
-//    break;
-//  };
-//  
-//  }
+    
+
 //  Serial.println(String() + "currentSelect:" + currentSelect);
 //  Serial.println(String() + "valueLength:" + valueLength);
 //  Serial.println(String() + "currentLayer:" + currentLayer);
@@ -231,9 +248,25 @@ void getRotary(){
     currentSelect--;
     cursorSelect();
   }
-
-
   
+
+   if(currentLayer==1){
+      Serial.println(String()+"currentSelect:"+currentSelect);
+      if(currentSelect == 5 && stepLayer == 1){
+        stepLayer=0; 
+        if(currentSelect != lastStep){clearMenu();  }
+        Serial.println(String()+"lastLayer:"+lastLayer);
+        
+        }
+       if(currentSelect == 4 && stepLayer == 0){
+        stepLayer=1; 
+        if(currentSelect != lastStep){clearMenu();  }
+        Serial.println(String()+"lastLayer:"+lastLayer);
+        
+        }
+        lastStep = currentSelect; 
+    }
+    
 //  Serial.println(String() + "newPosition:" + newPosition);
   //Serial.println(String() + "currentSelect:" + currentSelect);
   if(subLayer==1){
@@ -272,44 +305,41 @@ void getRotary(){
      }  
   }
 
-  if(currentLayer==1){
-      Serial.println(String()+"currentSelect:"+currentSelect);
-      if(currentSelect == 5 && stepLayer == 1){
-        stepLayer=0; 
-        if(currentSelect != lastStep){clearMenu();  }
-        Serial.println(String()+"lastLayer:"+lastLayer);
-        
-        }
-       if(currentSelect == 4 && stepLayer == 0){
-        stepLayer=1; 
-        if(currentSelect != lastStep){clearMenu();  }
-        Serial.println(String()+"lastLayer:"+lastLayer);
-        
-        }
-        lastStep = currentSelect; 
-    }
+  if(subLayer==3){
+     if(newPosition > oldPosition && timerLock < 10) {
+     timerLock++;
+     if(timerLock != lastLock){lcd.setCursor(9,2); lcd.print(panah[2]);}// }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
+     }
+     else if(newPosition < oldPosition && timerLock != 0){
+      timerLock--;
+      if(timerLock != lastLock){ lcd.setCursor(4,2); lcd.print(panah[1]); }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
+     }
+     // else if(timerLock == lastLock){lcd.setCursor(11,1); lcd.print(panah[0]);}
+     delay(500);
+    lastLock = timerLock;
+     if(timerLock == lastLock){ lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
+  }
    
-  Serial.println(String()+"newPosition     :"+newPosition);
-  Serial.println(String()+"oldPosition     :"+oldPosition);
-  //Serial.println(String()+"currentSelect:"+currentSelect);
+  if(subLayer==4){
+     if(newPosition > oldPosition && timerSleep < 10) {
+     timerSleep++;
+     if(timerSleep != lastSleep){lcd.setCursor(9,2); lcd.print(panah[2]);}//panahRun = 2; }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
+     }
+     else if(newPosition < oldPosition && timerSleep != 0){
+      timerSleep--;
+      if(timerSleep != lastSleep){lcd.setCursor(4,2); lcd.print(panah[1]); }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
+     }
+     // else if(timerLock == lastLock){lcd.setCursor(11,1); lcd.print(panah[0]);}
+     delay(500);
+    lastSleep = timerSleep;
+     if(timerSleep == lastSleep){ lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
+  }
+ 
   oldPosition = newPosition;
  
 }
-//if(currentLayer==1){
-//      if(currentSelect < 5){
-//        //stepLayer=1; 
-//        lastStep = currentSelect; 
-//        //Serial.println(String()+"lastLayer:"+lastLayer);
-//        }
-//      else if(currentSelect > 4){
-//        //stepLayer=2; 
-//        lastStep = currentSelect; 
-//       // Serial.println(String()+"lastLayer:"+lastLayer);
-//       }
-//      
-// }
-// Serial.println(String() + "currentSelect:" + currentSelect);
-// Serial.println(String() + "cursorLayer:" + cursorLayer);
+
+
 }
 
 void showLcd(){
@@ -343,23 +373,7 @@ void showLcd(){
     
    
   }
-//   if(currentLayer==1 && stepLayer == 1){
-//   // clearSelect();
-//    lastStep = stepLayer;
-//    lcd.setCursor(18,cursorLayer );
-//    lcd.print("<-");
-//
-////    for(int i=0;i<currentLength;i++){
-////      lcd.setCursor(0,i);
-////      lcd.print(menu1[i+1]);
-////    }
-//      for(int i=0;i<4;i++){
-//      lcd.setCursor(0,i);
-//      lcd.print(menu1[i+1]);
-//      //Serial.println(String()+"menu1:"+menu1[i+1]);
-//    }
-//    //Serial.println(String()+"lastLayer:"+lastLayer);
-//  }
+
    if(currentLayer==1 ){
     //clearSelect();
     //lastStep = stepLayer;
@@ -416,11 +430,32 @@ void showLcd(){
     if(flagS){lcd.setCursor(12,cursorLayer); lcd.print("*");}
   }
 
+  if(subLayer==3){
+    lcd.setCursor(2,0);
+    lcd.print("SET TIMER LOCK");
+    lcd.setCursor(6,2);
+    lcd.print((timerLock<10)?"0"+String(timerLock):timerLock);
+    
    
-//  else if(currentLayer==5){
-//    
-//  }
+    
+//     Serial.println(String()+"timerLock    :"+timerLock);
+//    Serial.println(String()+"lastLock     :"+lastLock);
+    //if(panahRun == 0){ lcd.setCursor(11,1); lcd.print(panah[panahRun]);}
+//    lcd.print(panah[panahRun]);//(state==1)?panah[panahRun]:panah[panahRun]);
+    
+  }
+
+  if(subLayer==4){
+    lcd.setCursor(2,0);
+    lcd.print("SET TIMER SLEEP");
+    lcd.setCursor(6,2);
+    lcd.print((timerSleep<10)?"0"+String(timerSleep):timerSleep);
+    
+  }
+
   
+
+   
 }
 
 void cursorSelect(){
