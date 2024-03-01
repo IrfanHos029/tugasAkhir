@@ -21,10 +21,10 @@ String menuJarak[]={"4","Sensor 1:","Sensor 2:","Sensor 3:","Back"};
 
 int currentLength;
 int currentLayer =0;
-int lastLayer=99;
-int lastSubLayer=99;
+//int lastLayer=99;
+//int lastSubLayer=99;
 int currentSelect=1;
-int currentChange = 0;
+
 int cursorLayer = 0;
 int subLayer=0;
 float parWeight=900;
@@ -34,10 +34,10 @@ int valueHeight = 0;
 int flagS=0;
 long newPosition=0;
 int stepLayer=1;
-int lastStep,lastSleep;
+int lastStep,lastSleep,lastLock;
 int timerLock,timerSleep;
 char *panah[]{" ","<",">"};
-int panahRun,lastLock;
+//int panahRun;
 
 /*
  * address  val
@@ -220,7 +220,7 @@ void getRotary(){
   switch(currentLayer){
     case 1 :
      // if(currentLayer != lastLayer){ clearMenu();}
-      lastLayer = currentLayer;     
+//      //lastLayer = currentLayer;     
       currentLength = menu1[0].toInt();
       //Serial.println(String()+"lastLayer2:"+lastLayer);
     break;
@@ -228,18 +228,18 @@ void getRotary(){
   switch(subLayer){
     case 1 :
      // if(subLayer != lastSubLayer){ clearMenu();}
-      lastSubLayer = subLayer;
+      //lastSubLayer = subLayer;
       currentLength = 1;
      break;
      
     case 2 :
      // if(subLayer != lastSubLayer){ clearMenu();}
-      lastSubLayer = subLayer;
+      //lastSubLayer = subLayer;
       currentLength = menuJarak[0].toInt();
      break;
 
      case 3 :
-       lastSubLayer = subLayer;
+      // lastSubLayer = subLayer;
        currentLength = 1;
      break;
 
@@ -265,13 +265,13 @@ void getRotary(){
       if(currentSelect == 5 && stepLayer == 1){
         stepLayer=0; 
         if(currentSelect != lastStep){clearMenu();  }
-        Serial.println(String()+"lastLayer:"+lastLayer);
+        //Serial.println(String()+"lastLayer:"+lastLayer);
         
         }
        if(currentSelect == 4 && stepLayer == 0){
         stepLayer=1; 
         if(currentSelect != lastStep){clearMenu();  }
-        Serial.println(String()+"lastLayer:"+lastLayer);
+        //Serial.println(String()+"lastLayer:"+lastLayer);
         
         }
         lastStep = currentSelect; 
@@ -535,25 +535,3 @@ void clearMenu(){
   for(int i=0;i<20;i++){lcd.setCursor (i,3); lcd.print(" ");}
  
 }
-
-//void activeSelect(int row,int colom){
-//  unsigned long tmr = millis();
-//  static long saveTmrBlink=0;
-//  static bool state=false;
-//  
-//  if(tmr - saveTmrBlink >= 1000){
-//    saveTmrBlink = tmr;
-//    state=!state;
-//  //lcd.blink();
-//  lcd.setCursor(row,colom);
-//  if(state){lcd.write(byte(0)); lcd.write(byte(0));}
-//  else{lcd.print("  ");}
-//  Serial.println(String() + "cursorLayer:" + cursorLayer);
-//  }
-//  
-//}
-//
-//void inActiveSelect(int row,int colom){
-//  lcd.setCursor(row,colom);
-//  lcd.noBlink();
-//}
