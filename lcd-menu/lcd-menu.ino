@@ -16,9 +16,9 @@ int buttonPin = 8;
 OneButton button0(buttonPin, true);
 
 ///String menu1[]={"3","setBeban","setJarak","setLed"};
-String menu1[]={"6","kalibrasi Beban","Kalibrasi Jarak","Set Timer LCD","Set Timer Sleep","Set LED","Back"};
+String menu1[]={"5","kalibrasi Beban","Kalibrasi Jarak","Set Timer LCD","Set Timer Sleep","Back"};
 String menuJarak[]={"4","Sensor 1:","Sensor 2:","Sensor 3:","Back"};
-int led[]={8,9,10};
+
 int currentLength;
 int currentLayer =0;
 int lastLayer=99;
@@ -38,7 +38,7 @@ int lastStep,lastSleep;
 int timerLock,timerSleep;
 char *panah[]{" ","<",">"};
 int panahRun,lastLock;
-int merah,biru,hijau;
+
 /*
  * address  val
  * 0        weight
@@ -46,6 +46,16 @@ int merah,biru,hijau;
  * 2        sensor 2
  * 3        sensor 3
  */
+ byte pointer[] = {
+  B00000,
+  B00100,
+  B01000,
+  B11111,
+  B01000,
+  B00100,
+  B00000,
+  B00000
+};
 void setup() {
   
 //  button0.attachDoubleClick(doubleClick);
@@ -53,9 +63,9 @@ Serial.begin(9600);
   lcd.begin ();
   //lcd.setBacklightPin(3,POSITIVE);
   lcd.setBacklight(HIGH);
+lcd.createChar(0, pointer);
 button0.attachClick(singleClick);
 button0.attachDoubleClick(doubleclick1);
-for(int i=0;i<3;i++){ pinMode(led[i],OUTPUT);}
 parWeight = EEPROM.read(0);
 valueLength = EEPROM.read(1);
 valueWidth = EEPROM.read(2);
@@ -282,7 +292,7 @@ void getRotary(){
     if(newPosition > oldPosition && valueLength < 50) {
      valueLength++;
      }
-     else if(newPosition < oldPosition && valueLength > -1){
+     else if(newPosition < oldPosition && valueLength > 0){
       valueLength--;
      }  
   }
@@ -291,7 +301,7 @@ void getRotary(){
     if(newPosition > oldPosition && valueWidth < 50) {
      valueWidth++;
      }
-     else if(newPosition < oldPosition && valueWidth > -1){
+     else if(newPosition < oldPosition && valueWidth > 0){
       valueWidth--;
      }  
   }
@@ -300,7 +310,7 @@ void getRotary(){
     if(newPosition > oldPosition && valueHeight < 50) {
      valueHeight++;
      }
-     else if(newPosition < oldPosition && valueHeight > -1){
+     else if(newPosition < oldPosition && valueHeight > 0){
       valueHeight--;
      }  
   }
@@ -377,8 +387,8 @@ void showLcd(){
    if(currentLayer==1 ){
     //clearSelect();
     //lastStep = stepLayer;
-    lcd.setCursor(18,cursorLayer );
-    lcd.print("<-");
+    lcd.setCursor(17,cursorLayer );
+    lcd.write(byte(0));
 
     if(currentSelect < 5){
       for(int i=0;i<4;i++){
@@ -386,6 +396,10 @@ void showLcd(){
       lcd.print(menu1[i+1]);
       //Serial.println(String()+"menu1:"+menu1[i+1]);
     }
+      for(int i=0;i<2;i++){
+      lcd.setCursor(19,i);
+      lcd.print("|");
+      }
     }
 
     if(currentSelect > 4){
@@ -394,7 +408,10 @@ void showLcd(){
       lcd.print(menu1[5+i]);
       //Serial.println(String()+"menu1:"+menu1[4+i]);
       }
-   // Serial.println(String()+"lastLayer2:"+lastLayer);
+     for(int i=0;i<2;i++){
+      lcd.setCursor(19,2+i);
+      lcd.print("|");
+      }
   }
   }
 
@@ -411,7 +428,7 @@ void showLcd(){
   }
 
    if(subLayer==2){
-     lcd.setCursor(18,cursorLayer ); lcd.print("<-");
+     lcd.setCursor(18,cursorLayer ); lcd.write(byte(0));
      
      for(int i=0;i<currentLength;i++){
       lcd.setCursor(0,i);
@@ -488,13 +505,13 @@ void cursorSelect(){
 }
 
 void clearSelect(){
-  lcd.setCursor (18,0);
+  lcd.setCursor (17,0);
   lcd.print("  ");
-  lcd.setCursor (18,1);
+  lcd.setCursor (17,1);
   lcd.print("  ");
-  lcd.setCursor (18,2);
+  lcd.setCursor (17,2);
   lcd.print("  ");
-  lcd.setCursor (18,3);
+  lcd.setCursor (17,3);
   lcd.print("  ");
 }
 
