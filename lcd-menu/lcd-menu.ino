@@ -1,7 +1,6 @@
 #include <OneButton.h>
 #include <Encoder.h>
 #include <Wire.h>
-//#include <LCD.h>
 #include <LiquidCrystal_I2C.h>
 #include <EEPROM.h>
 
@@ -20,20 +19,18 @@ String menu1[]={"5","kalibrasi Beban","Kalibrasi Jarak","Set Timer LCD","Set Tim
 String menuJarak[]={"4","Sensor 1:","Sensor 2:","Sensor 3:","Back"};
 
 int currentLength;
-int currentLayer =0;
-//int lastLayer=99;
-//int lastSubLayer=99;
+byte currentLayer =0;
 int currentSelect=1;
 
-int cursorLayer = 0;
-int subLayer=0;
+byte cursorLayer = 0;
+byte subLayer=0;
 float parWeight=900;
 int valueLength = 0;
 int valueWidth = 0;
 int valueHeight = 0;
-int flagS=0;
+bool flagS=0;
 long newPosition=0;
-int stepLayer=1;
+bool stepLayer=1;
 int lastStep,lastSleep,lastLock;
 int timerLock,timerSleep;
 char *panah[]{" ","<",">"};
