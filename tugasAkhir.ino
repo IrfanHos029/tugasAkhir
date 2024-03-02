@@ -42,10 +42,10 @@ bool  flagFsh = false;
 bool  stateRun= true;
 bool  runObject = true;
 bool  trigger   = false;
-int   hasilP,hasilL,hasilT;
+char   hasilP,hasilL,hasilT;
 int   length,height,width;
 int   timerFlag;
-int   timeRead;
+int   timeRead = 0;;
 int lastStep,lastSleep,lastLock;
 int timerLock,timerSleep;
 int valueLength = 0;
@@ -189,8 +189,8 @@ referenceLength= valueLength;
 referenceWidth = valueWidth;
 referenceHeight= valueHeight;
 calibration_factor = parWeight;
-scale.set_scale(-9);
-  scale.tare();
+scale.set_scale(calibration_factor);
+scale.tare();
 //  for(int i = 0; i < 100; i++){
 //    lcd.setCursor(0,0);
 //    lcd.print("LOADING..");
@@ -205,18 +205,19 @@ scale.set_scale(-9);
   Serial.println(String()+"referenceHeight:"+referenceHeight);
   Serial.println(String()+"calibration_factor:"+calibration_factor);
   lcd.clear();
+  Serial.println(String()+"timerSleep:"+timerSleep);
   Serial.println("build run");
 }
 
 void loop() {
-   button0.tick();
-    getRotary();
-    weight = getWeight();
     
+    getRotary();
     kalkulasi();
+    weight = getWeight();
+    button0.tick();
     showSetting();
-//   Button();
-   if(trigger == false && flagTr == 1 && flagFsh == 0 && currentLayer == 0){
+   
+   if(trigger == false && flagTr == 1 && flagFsh == 0 ){
     Serial.print("timerFlag:");
     Serial.println(timerFlag);
     while(timerFlag>timerSleep){
@@ -242,6 +243,8 @@ void singleClick(){
     timeRead  = 0; 
     flagFsh   = false;
     stateRun  = true;
+   // scale.power_up();
+    //scale.tare();
     }
 //   if(readReset != LOW && lockReset == 1){lockReset = 0; }
    
@@ -253,6 +256,8 @@ void singleClick(){
       currentLayer = -1;
       currentSelect = 1;
       cursorSelect();
+      //scale.power_up();
+      //scale.tare();
     break;
 
     case 2 :
@@ -288,6 +293,8 @@ void singleClick(){
       //runObject = true;
       timeRead  = 0; 
       timerFlag = 0;
+      
+      //scale.tare();
     break;
     
   };
@@ -300,11 +307,12 @@ void singleClick(){
   currentSelect = 1;
   cursorSelect();
   EEPROM.write(0,parWeight);
-  calibration_factor = parWeight;
-  scale.set_scale(calibration_factor);
-  scale.tare();
+ // calibration_factor = parWeight;
+//  scale.set_scale(calibration_factor);
+//  scale.tare();
   Serial.println(String()+"calibration_factor:"+calibration_factor);
   //EEPROM.commit();
+  //scale.power_down();
  }
 
  else if(currentLayer != 1 && subLayer == 3 ){
@@ -379,6 +387,7 @@ if(currentLayer == 0){
     //runObject = false; 
     flagFsh   = false;
     stateRun  = true;
+    //scale.tare();
 }
   }
 
@@ -450,7 +459,7 @@ void getRotary(){
      if(newPosition > oldPosition && parWeight < 1000) {
      parWeight++;
      }
-     else if(newPosition < oldPosition && parWeight != 0){
+     else if(newPosition < oldPosition && parWeight != -50){
       parWeight--;
      }
   }
@@ -619,22 +628,23 @@ void showSetting(){
 //    lcd.setCursor(14,3);
 //    lcd.print("Gram");
     if(flagTr==true){
+    //scale.power_up();
     lcd.backlight();
     lcd.setCursor(0,0);
     lcd.print("Panjang:");
-    lcd.print((hasilP >= 50)? 00 : (hasilP<10)?"0"+String(hasilP):hasilP);
+    lcd.print((hasilP>=referenceLength)?"00" :(hasilP<10)?"0"+String(hasilP):hasilP);
     lcd.setCursor(13,0);
     lcd.print(" cm");
     
     lcd.setCursor(0,1);
     lcd.print("Lebar  :");
-    lcd.print((hasilL >= 50)? 0 : (hasilL<10)?"0"+String(hasilL):hasilL);
+    lcd.print((hasilL>=referenceWidth)?"00" :(hasilL<10)?"0"+String(hasilL):hasilL);
     lcd.setCursor(13,1);
     lcd.print(" cm");
     
     lcd.setCursor(0,2);
     lcd.print("Tinggi :");
-    lcd.print((hasilT >= 50)? 0 : (hasilT<10)?"0"+String(hasilT):hasilT);
+    lcd.print((hasilT>=referenceHeight)?"00" :(hasilT<10)?"0"+String(hasilT):hasilT);
     lcd.setCursor(13,2);
     lcd.print(" cm");
 
@@ -697,6 +707,7 @@ void showSetting(){
    
    if(subLayer==1){
     
+    scale.set_scale(calibration_factor);
     lcd.setCursor(0,0);
     lcd.print("BERAT:");
     lcd.setCursor(6,1);
@@ -831,8 +842,22 @@ void kalkulasi(){
  
   showMonitor();
   }
-  else{lcd.noBacklight(); buzzerRun(1); delay(50); lcd.backlight(); buzzerRun(0); hasilP = hasilP; hasilL = hasilL; hasilT = hasilT; trigger = false; runObject = false; timeRead=0; flagFsh=true;}
-  Serial.print(String()+"timeRead:" + timeRead);
+  else{
+    lcd.noBacklight();
+    buzzerRun(1); 
+    delay(50); 
+    lcd.backlight(); 
+    buzzerRun(0); 
+    hasilP = hasilP;//(hasilP<10)?"0" + String(hasilP):hasilP; 
+    hasilL = hasilL;//(hasilL<10)?"0" + String(hasilL):hasilL; 
+    hasilT = hasilT;//(hasilT<10)?"0" + String(hasilT):hasilT; 
+    Serial.print(String()+"hasilL:" + hasilL); 
+    trigger = false; 
+    runObject = false; 
+    timeRead=0; flagFsh=true;
+    //scale.power_down();
+    }
+  //Serial.print(String()+"timeRead:" + timeRead);
  }
   length = panjang;
   width  = lebar;
@@ -872,9 +897,10 @@ float getWeight(){
  
   unsigned long tmr = millis();
   static unsigned long saveTmr=0;
+  static int objek = 1000;//
  
- 
-  if(tmr - saveTmr > 1000 && runObject == true  ){
+  if(tmr - saveTmr > 1000 && runObject == true  && currentLayer == 0){
+  //scale.power_up();
   saveTmr = tmr;
 // Serial.println("run ");
   units = scale.get_units(),3;
@@ -882,13 +908,14 @@ float getWeight(){
   {
     units = 0.00; 
   }
-  if(units <= 0 && stateRun == 1 && currentLayer == 0){ timerLCD(1,1); }
+  if(units <= objek && stateRun == 1 ){ timerLCD(1,1); }
  // ounces = units * 0.035274;
  
- if(units > 1000 && currentLayer == 0){
+ if(units > objek ){
     trigger = true;
     flagTr  = true;
     timerLCD(0,0);
+    //scale.power_up();
   }
   return units;
   }
@@ -902,6 +929,7 @@ float getWeightSet(){
  // static unsigned long saveTmr2=0;
 
   if(tmr - saveTmr > 50){
+    //scale.power_up();
     saveTmr = tmr;
     unitSetting = scale.get_units(),3;
     if (unitSetting < 0 )
@@ -917,7 +945,7 @@ void timerLCD(bool state,bool stateLCD){
   unsigned long tmr = millis();
   static unsigned long saveTmr;
   
-  if(tmr - saveTmr > 1000 && state == true && stateLCD == true){
+  if(tmr - saveTmr > 1000 && state == true ){
     saveTmr = tmr;
     timerFlag++;
     flagTr=1;
