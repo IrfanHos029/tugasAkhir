@@ -750,7 +750,7 @@ void showSetting(){
 
    if(currentLayer==1 && subLayer == 0){
     lcd.backlight();
-    if(currentLayer==1 && subLayer == 0){getIndikator(2,0,1);}
+    //if(currentLayer==1 && subLayer == 0){getIndikator(2,0,1);}
     //clearSelect();
     //lastStep = stepLayer;
     lcd.setCursor(18,cursorLayer );
