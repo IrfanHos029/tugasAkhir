@@ -3,6 +3,10 @@
  * pin Echo ultrasonik 1  : 2
  * pin Echo ultrasonik 2  : 3
  * pin Echo ultrasonik 3  : 4
+ * 
+ * led[0] = indikator run
+ * led[1] = indikator lock
+ * led[2] = indikator kalibrasi
  */
  
 #include <Wire.h> 
@@ -22,6 +26,7 @@
 #define echoPin2   10//3
 #define echoPin3   4
 #define buttonReset 8
+int led[]={11,12,13};
 
 HX711 scale(loadCelDTpin, loadCellSCKpin); 
 Encoder myEnc(encoderDTpin, encoderCLKpin);
@@ -38,8 +43,8 @@ byte currentLayer =0;
 bool  flagTr  = true;
 bool stepLayer=1;
 bool flagS=0;
-bool  flagFsh = false;
-bool  stateRun= true;
+//bool  flagFsh = false;
+bool  stateRun= 1;
 bool  runObject = true;
 bool  trigger   = false;
 char   hasilP,hasilL,hasilT;
@@ -61,14 +66,20 @@ float weight;
 long oldPosition  = 0;
 long newPosition=0;
 
-
-
+ unsigned long saveTmrH;
+//trigger = false; 
+//runObject = true; 
+//timeRead  = 0; 
+//flagFsh   = false;
+//stateRun  = 1;
+//flagTr =1;
+ bool state1 = 0;
  int referenceLength = 0; // Panjang referensi dalam cm
  int referenceWidth  = 0;  // Lebar referensi dalam cm
  int referenceHeight = 0; // Tinggi referensi dalam cm
 // int referenceWeight = 5.0; // Berat referensi dalam kg
 float calibration_factor = -9; //rubah nilai ini sesuai hasil dari nilai kalibrasi
-String menu1[]={"5","kalibrasi Beban","Kalibrasi Jarak","Set Timer LCD","Set Timer Sleep","Back"};
+String menu1[]={"5","kalibrasi Beban","Kalibrasi Dimensi","Set Timer Lock","Set Timer Sleep","Back"};
 String menuJarak[]={"4","Sensor 1:","Sensor 2:","Sensor 3:","Back"};
 char *panah[]{" ","<",">"};
 char  *textWeight[]{" Gram"," KG  "};
@@ -167,6 +178,7 @@ void setup() {
   
   lcd.backlight();
   pinMode(buzzer, OUTPUT);
+  for(int i = 0; i < 3; i++){pinMode(led[i],OUTPUT);}
   //pinMode(buttonReset,INPUT_PULLUP);
   button0.attachClick(singleClick);
   button0.attachDoubleClick(doubleclick1);
@@ -207,32 +219,57 @@ scale.tare();
   lcd.clear();
   Serial.println(String()+"timerSleep:"+timerSleep);
   Serial.println("build run");
+  Serial.println(String() + "trigger  :" + trigger);
+Serial.println(String() + "runObject:" + runObject);
+Serial.println(String() + "timeRead :" + timeRead);
+//Serial.println(String() + "flagFsh  :" + flagFsh);
+Serial.println(String() + "stateRun :" + stateRun);
 }
 
 void loop() {
-    
+    button0.tick();
     getRotary();
     kalkulasi();
     weight = getWeight();
-    button0.tick();
+    timerLCD(); 
     showSetting();
-   
-   if(trigger == false && flagTr == 1 && flagFsh == 0 ){
-    Serial.print("timerFlag:");
-    Serial.println(timerFlag);
-    while(timerFlag>timerSleep){
-      timerLCD(0,1);
-      break;
-    }
-   }
+    showLed();
+   Serial.println(String()+"state1:"+ state1);
 }
+    //if(runObject){timerLCD();}
+//   Serial.println(String() + "flagTr:" + flagTr);
+//   Serial.print("timerFlag:");
+//    Serial.println(timerFlag);
+//   if(trigger == false && flagTr == 1 && flagFsh == 0 ){
+//    
+//    while(timerFlag>timerSleep){
+//      Serial.print("whilebsleep");
+//      timerLCD(0,1);
+//      flagTr = 0;
+//      timerFlag=0;
+//      break;
+//    }
+//   }
+
+void showLed(){
+    if(state1 == 1 && runObject == 1 && currentLayer == 0){getIndikator(0,1,0);}
+    else if(state1 == 0 && runObject == 1 && currentLayer == 0){getIndikator(0,0,1); getIndikator(1,0,0); getIndikator(2,0,0);}
+    else if(state1 == 0 && runObject == 0 && currentLayer == 0){getIndikator(0,0,0); getIndikator(1,0,1);}
+    else if(currentLayer == 1 && subLayer == 0) {getIndikator(0,0,0); getIndikator(1,0,0); getIndikator(2,0,1);}
+    else if(currentLayer != 1 && subLayer == 1){ getIndikator(2,1,0); }
+    else if(currentLayer != 1 && subLayer == 2 && flagS == 0){ getIndikator(2,0,1); }
+    else if(currentLayer != 1 && subLayer == 2 && flagS == 1){ getIndikator(2,1,0); }
+    else if(currentLayer != 1 && subLayer == 3){ getIndikator(2,1,0); }
+    else if(currentLayer != 1 && subLayer == 4){ getIndikator(2,1,0); }
+}
+
 
 void singleClick(){
  // getRotary();
   Serial.println("button 1 klik run");
-  static byte lockReset = 0;
-   if(currentLayer == 0 && subLayer == 0){ 
-    lockReset = 1; 
+  //static byte lockReset = 0;
+   if(currentLayer == 0 && subLayer == 0 ){ 
+    stateRun  = 1;
     lcd.clear();
     hasilP  = 0; 
     hasilL  = 0; 
@@ -241,11 +278,23 @@ void singleClick(){
     trigger = false; 
     runObject = true; 
     timeRead  = 0; 
-    flagFsh   = false;
-    stateRun  = true;
-   // scale.power_up();
-    //scale.tare();
+   // flagFsh   = false;
+    state1=0;
+Serial.println(String() + "trigger  :" + trigger);
+Serial.println(String() + "runObject:" + runObject);
+Serial.println(String() + "timeRead :" + timeRead);
+//Serial.println(String() + "flagFsh  :" + flagFsh);
+Serial.println(String() + "stateRun :" + stateRun);
     }
+
+//    if(currentLayer == 0 &&  flagFsh == 0){
+//       stateRun  = 1;
+//       flagTr = 1;
+//       state1=0;
+//       trigger = false; 
+//       runObject = true; 
+//       timeRead  = 0; 
+//    }
 //   if(readReset != LOW && lockReset == 1){lockReset = 0; }
    
  if(currentLayer == 1 && subLayer == 0){ 
@@ -293,6 +342,8 @@ void singleClick(){
       //runObject = true;
       timeRead  = 0; 
       timerFlag = 0;
+      //flagTr  = 1;
+      state1=0;
       
       //scale.tare();
     break;
@@ -385,8 +436,11 @@ if(currentLayer == 0){
   clearMenu();
     trigger = false; 
     //runObject = false; 
-    flagFsh   = false;
-    stateRun  = true;
+//    flagFsh   = false;
+    stateRun  = 0;
+     //stateRun = 0;
+   
+   // state1 = 1;
     //scale.tare();
 }
   }
@@ -397,7 +451,12 @@ void getRotary(){
     case 1 :
      // if(currentLayer != lastLayer){ clearMenu();}
 //      //lastLayer = currentLayer;     
+// state1=0;
+      flagTr  = 1;
+      state1 = 0;
+     // stateRun = 0;
       currentLength = menu1[0].toInt();
+      //getIndikator(2,1,1);
       //Serial.println(String()+"lastLayer2:"+lastLayer);
     break;
   };
@@ -406,12 +465,14 @@ void getRotary(){
      // if(subLayer != lastSubLayer){ clearMenu();}
       //lastSubLayer = subLayer;
       currentLength = 1;
+      //getIndikator(2,0,1);
      break;
      
     case 2 :
      // if(subLayer != lastSubLayer){ clearMenu();}
       //lastSubLayer = subLayer;
       currentLength = menuJarak[0].toInt();
+     // getIndikator(2,0,1);
      break;
 
      case 3 :
@@ -421,17 +482,19 @@ void getRotary(){
 
      
   };
-  
+   Serial.println(String() + "flagTr:" + flagTr);
  if (newPosition != oldPosition){
-  if (newPosition > oldPosition && currentSelect < currentLength && flagS == 0) {
+  if (newPosition < oldPosition && currentSelect < currentLength && flagS == 0) {
     clearSelect();
     currentSelect++;
+    
     cursorSelect(); 
   }
 
-  else if(newPosition < oldPosition && currentSelect != 1 && flagS == 0){
+  else if(newPosition > oldPosition && currentSelect != 1 && flagS == 0){
     clearSelect();
     currentSelect--;
+    
     cursorSelect();
   }
   
@@ -456,63 +519,75 @@ void getRotary(){
 //  Serial.println(String() + "newPosition:" + newPosition);
   //Serial.println(String() + "currentSelect:" + currentSelect);
   if(subLayer==1){
-     if(newPosition > oldPosition && parWeight < 1000) {
+     if(newPosition < oldPosition && parWeight < 1000) {
      parWeight++;
+     
      }
-     else if(newPosition < oldPosition && parWeight != -50){
+     else if(newPosition > oldPosition && parWeight != -50){
       parWeight--;
+       
      }
   }
 
    if(subLayer==2 && currentSelect == 1 && flagS == 1){
-    if(newPosition > oldPosition && valueLength < 50) {
+    if(newPosition < oldPosition && valueLength < 50) {
      valueLength++;
+     
      } 
-     else if(newPosition < oldPosition && valueLength > 0){
+     else if(newPosition > oldPosition && valueLength > 0){
       valueLength--;
+       
      }  
   }
 
   if(subLayer==2 && currentSelect == 2 && flagS == 1){
-    if(newPosition > oldPosition && valueWidth < 50) {
+    if(newPosition < oldPosition && valueWidth < 50) {
      valueWidth++;
+     
      }
-     else if(newPosition < oldPosition && valueWidth > 0){
+     else if(newPosition > oldPosition && valueWidth > 0){
       valueWidth--;
+      
      }  
   }
 
   if(subLayer==2 && currentSelect == 3 && flagS == 1){
-    if(newPosition > oldPosition && valueHeight < 50) {
+    if(newPosition < oldPosition && valueHeight < 50) {
      valueHeight++;
+     
      }
-     else if(newPosition < oldPosition && valueHeight > 0){
+     else if(newPosition > oldPosition && valueHeight > 0){
       valueHeight--;
+      
      }  
   }
 
   if(subLayer==3){
-     if(newPosition > oldPosition && timerLock < 10) {
+     if(newPosition < oldPosition && timerLock < 20) {
      timerLock++;
-     if(timerLock != lastLock){lcd.setCursor(9,2); lcd.print(panah[2]);}// }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
+     
+     if(timerLock != lastLock){ lcd.setCursor(9,2); lcd.print(panah[2]);}// }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
      }
-     else if(newPosition < oldPosition && timerLock != 0){
+     else if(newPosition > oldPosition && timerLock != 0){
       timerLock--;
+     
       if(timerLock != lastLock){ lcd.setCursor(4,2); lcd.print(panah[1]); }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
      }
      // else if(timerLock == lastLock){lcd.setCursor(11,1); lcd.print(panah[0]);}
      delay(500);
     lastLock = timerLock;
-     if(timerLock == lastLock){ lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
+     if(timerLock == lastLock){lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
   }
    
   if(subLayer==4){
-     if(newPosition > oldPosition && timerSleep < 10) {
+     if(newPosition < oldPosition && timerSleep < 20) {
      timerSleep++;
+     
      if(timerSleep != lastSleep){lcd.setCursor(9,2); lcd.print(panah[2]);}//panahRun = 2; }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
      }
-     else if(newPosition < oldPosition && timerSleep != 0){
+     else if(newPosition > oldPosition && timerSleep != 0){
       timerSleep--;
+      
       if(timerSleep != lastSleep){lcd.setCursor(4,2); lcd.print(panah[1]); }//lcd.setCursor(11,1);lcd.print(panah[panahRun]);} 
      }
      // else if(timerLock == lastLock){lcd.setCursor(11,1); lcd.print(panah[0]);}
@@ -601,7 +676,7 @@ void showLCD(){
 
 void showSetting(){
   int dataSensor[]={valueLength,valueWidth,valueHeight,0};
-  if(currentLayer==0){
+  if(currentLayer==0 && subLayer == 0){
 //    lcd.setCursor(0,0);
 //    lcd.print("Panjang:");
 //    lcd.print((valueLength<10)?"0"+String(valueLength):valueLength);
@@ -628,7 +703,8 @@ void showSetting(){
 //    lcd.setCursor(14,3);
 //    lcd.print("Gram");
     if(flagTr==true){
-    //scale.power_up();
+    
+    //getIndikator(2,0,0);
     lcd.backlight();
     lcd.setCursor(0,0);
     lcd.print("Panjang:");
@@ -668,14 +744,16 @@ void showSetting(){
         buzzerRun(0);
     }
     }
-    else{lcd.noBacklight(); lcd.clear();}
+    else{ lcd.noBacklight(); lcd.clear();}
    
   }
 
-   if(currentLayer==1 ){
+   if(currentLayer==1 && subLayer == 0){
+    lcd.backlight();
+    if(currentLayer==1 && subLayer == 0){getIndikator(2,0,1);}
     //clearSelect();
     //lastStep = stepLayer;
-    lcd.setCursor(17,cursorLayer );
+    lcd.setCursor(18,cursorLayer );
     lcd.write(byte(7));
 
     if(currentSelect < 5){
@@ -706,7 +784,7 @@ void showSetting(){
    
    
    if(subLayer==1){
-    
+    //getIndikator(2,1,1);
     scale.set_scale(calibration_factor);
     lcd.setCursor(0,0);
     lcd.print("BERAT:");
@@ -718,10 +796,11 @@ void showSetting(){
     lcd.print("Parameter : ");
     lcd.print(parWeight);
     Serial.println(String()+"getWeightSet():"+getWeightSet());
+    
   }
 
    if(subLayer==2){
-     lcd.setCursor(18,cursorLayer ); lcd.write(byte(7));
+     lcd.setCursor(17,cursorLayer ); lcd.write(byte(7));
      
      for(int i=0;i<currentLength;i++){
       lcd.setCursor(0,i);
@@ -729,7 +808,7 @@ void showSetting(){
 //      lcd.setCursor(10,(i==3)?2:i);
 //      lcd.print(dataSensor[(i==3)?2:i]); 
       lcd.setCursor(13,(i==3)?2:i);
-      lcd.print(" CM");
+      lcd.print("CM");
     }
     lcd.setCursor(10,0);
     lcd.print((valueLength<10)?"0"+String(valueLength):valueLength); 
@@ -738,6 +817,7 @@ void showSetting(){
     lcd.setCursor(10,2);
     lcd.print((valueHeight<10)?"0" + String(valueHeight):valueHeight); 
     if(flagS){lcd.setCursor(12,cursorLayer); lcd.print("*");}
+    //else{ getIndikator(2,0,1); }
   }
 
   if(subLayer==3){
@@ -745,14 +825,15 @@ void showSetting(){
     lcd.print("SET TIMER LOCK");
     lcd.setCursor(6,2);
     lcd.print((timerLock<10)?"0"+String(timerLock):timerLock);
+   // getIndikator(2,1,1);
   }
 
   if(subLayer==4){
     lcd.setCursor(2,0);
     lcd.print("SET TIMER SLEEP");
     lcd.setCursor(6,2);
-    lcd.print((timerSleep<10)?"0"+String(timerSleep):timerSleep);
-    
+    lcd.print((timerSleep < 1)?"OFF" :(timerSleep<10)?"0"+String(timerSleep)+" ":timerSleep);
+    //getIndikator(2,1,1);
   }
 }
 
@@ -854,11 +935,15 @@ void kalkulasi(){
     Serial.print(String()+"hasilL:" + hasilL); 
     trigger = false; 
     runObject = false; 
-    timeRead=0; flagFsh=true;
+    timeRead=0; 
+    //flagFsh=true;
+    //stateRun = 0;
     //scale.power_down();
     }
   //Serial.print(String()+"timeRead:" + timeRead);
  }
+  
+  //else{getIndikator(0,0,1);}
   length = panjang;
   width  = lebar;
   height = tinggi;
@@ -908,15 +993,21 @@ float getWeight(){
   {
     units = 0.00; 
   }
-  if(units <= objek && stateRun == 1 ){ timerLCD(1,1); }
+  if(units < objek && trigger == false){ stateRun = 1; }
  // ounces = units * 0.035274;
  
  if(units > objek ){
     trigger = true;
-    flagTr  = true;
-    timerLCD(0,0);
+    flagTr  = 1;
+    //state1=0;
+   // timerLCD(0,0);
+    stateRun = 0;
+    state1=0;
     //scale.power_up();
   }
+  
+  Serial.println(String()+"flagTr:"+ flagTr);
+  Serial.println(String() + "stateRun :" + stateRun);
   return units;
   }
 
@@ -940,25 +1031,46 @@ float getWeightSet(){
   }
   
 }
- 
-void timerLCD(bool state,bool stateLCD){
-  unsigned long tmr = millis();
-  static unsigned long saveTmr;
+ //int Run;
+void timerLCD(){
+  static int Run;
+  int Delay = timerSleep*1000;
+  static int co;
+  Serial.println(String()+"stateRun:"+ stateRun);
+  if(timerSleep > 0){ Run = 1; } else{ Run = 0; }
+//  Serial.println(String()+"Run:"+ Run);
+
   
-  if(tmr - saveTmr > 1000 && state == true ){
-    saveTmr = tmr;
-    timerFlag++;
-    flagTr=1;
-    stateRun = 1;
-    Serial.println("tmr run ");
+  if(stateRun == 1 && Run == 1){
+  flagTr=1;
+  unsigned long tmrH = millis();
+  lcd.setCursor(18,0);
+  lcd.print(co);
+  //Serial.println(String()+"Delay    :"+ Delay);
+   co = (millis() - saveTmrH)/1000;
+  
   }
-  else{
-    saveTmr = 0;
-    timerFlag=0;
-    if(stateLCD){flagTr=0;}
-    stateRun = 0;
-    //timerLCD(0);
-  } 
+  else{ saveTmrH = millis(); co=0;  }
+  
+  if((millis() - saveTmrH) > Delay && stateRun == 1 && Run == 1){
+    
+    //timerFlag++;
+    
+    //stateRun = 0;
+    Serial.println("tmr run ");
+    //saveTmrH = tmrH;
+    if(state1==0 && stateRun == 1){state1 = 1;}
+  }
+  if(state1 == 1){ flagTr=0;  }
+//  else{
+//    //saveTmr = 0;
+//    //timerFlag=0;
+//    
+//    //stateRun = 0;
+//   
+//  }
+//Serial.println(String()+"timerSleep:"+ timerSleep);
+  //if(stateLCD){flagTr=0;} 
 }
 
 void buzzerRun(bool flag){
@@ -1043,4 +1155,24 @@ void clearMenu(){
  
   for(int i=0;i<20;i++){lcd.setCursor (i,3); lcd.print(" ");}
  
+}
+
+
+void getIndikator(int conLed,int stateRun,int stateLed){
+
+  unsigned long tmr = millis();
+  static unsigned long saveTmr;
+  static bool state=false;
+//  if(stateRun){
+  if((tmr - saveTmr) > 1000 && stateRun == 1){
+    state = !state;
+    digitalWrite(led[conLed],state);
+    saveTmr = tmr;
+  }
+ // }
+  else if(stateRun == 0){
+    //state = false;
+    digitalWrite(led[conLed],stateLed);
+  }
+  
 }
