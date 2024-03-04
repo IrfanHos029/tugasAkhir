@@ -812,7 +812,7 @@ float getWeightSet(){
   unsigned long tmr = millis();
   static unsigned long saveTmr=0;
 
-  if(tmr - saveTmr > 50){
+  if(tmr - saveTmr > 1000){
     //scale.power_up();
     saveTmr = tmr;
     unitSetting = scale.get_units(),3;
