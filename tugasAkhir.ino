@@ -17,18 +17,18 @@
 #include <Encoder.h>
 #include <EEPROM.h>
 
-#define encoderDTpin 2
-#define encoderCLKpin 3
-#define loadCelDTpin 6
-#define loadCellSCKpin 7
-#define triggerPin 5
-#define echoPin1   9//2
-#define echoPin2   10//3
-#define echoPin3   4
-#define buttonReset 8
+#define encoderDTpin 3
+#define encoderCLKpin 4
+#define loadCelDTpin 8
+#define loadCellSCKpin 9
+#define triggerPin A6
+#define echoPin1   A3//2
+#define echoPin2   A4//3
+#define echoPin3   A5
+#define buttonReset 2
 #define buzzer 11
 
-int led[]={11,12,13};
+int led[]={5,6,7};
 
 HX711 scale(loadCelDTpin, loadCellSCKpin); 
 Encoder myEnc(encoderDTpin, encoderCLKpin);
@@ -49,7 +49,7 @@ bool stateRun= 1;
 bool runObject = true;
 bool trigger   = false;
 bool state1 = 0;
-char hasilP,hasilL,hasilT;
+int hasilP=0,hasilL=0,hasilT=0;
 int  length,height,width;
 int  timerFlag;
 int  timeRead = 0;
@@ -60,7 +60,8 @@ int valueWidth = 0;
 int valueHeight = 0;
 int currentSelect = 1;
 int currentLength;
-float units   = -1;
+int units   = -1;
+int weightToInt;
 float unitSetting = -1;
 float ounces;
 float parWeight=900;
@@ -223,7 +224,8 @@ void loop() {
     button0.tick();
     getRotary();
     kalkulasi();
-    weight = getWeight();
+    //weight = getWeight();
+    //getWeightSet();
     timerLCD(); 
     showSetting();
     showLed();
@@ -390,108 +392,108 @@ void doubleclick1(){
 
 void getRotary(){
   newPosition = myEnc.read()/4;
- switch(currentLayer){
-    case 1 :
-      flagTr  = 1;
-      state1 = 0;
-      currentLength = menu1[0].toInt();
-    break;
- };
+  switch(currentLayer){
+     case 1 :
+       flagTr  = 1;
+       state1 = 0;
+       currentLength = menu1[0].toInt();
+     break;
+  };
+ 
+  switch(subLayer){
+     case 1 :
+       currentLength = 1;
+     break;
+      
+     case 2 :
+       currentLength = menuJarak[0].toInt();
+     break;
+ 
+     case 3 :
+       currentLength = 1;
+     break;
+  };
 
- switch(subLayer){
-    case 1 :
-      currentLength = 1;
-    break;
-     
-    case 2 :
-      currentLength = menuJarak[0].toInt();
-    break;
-
-    case 3 :
-      currentLength = 1;
-    break;
- };
-
- if (newPosition != oldPosition){
-  if (newPosition < oldPosition && currentSelect < currentLength && flagS == 0) {
-    clearSelect();
-    currentSelect++;
-    cursorSelect(); 
-  }
-
-  else if(newPosition > oldPosition && currentSelect != 1 && flagS == 0){
-    clearSelect();
-    currentSelect--;
-    cursorSelect();
-  }
+  if (newPosition != oldPosition){
+    if (newPosition < oldPosition && currentSelect < currentLength && flagS == 0) {
+      clearSelect();
+      currentSelect++;
+      cursorSelect(); 
+    }
   
-  if(currentLayer==1){
+    else if(newPosition > oldPosition && currentSelect != 1 && flagS == 0){
+      clearSelect();
+      currentSelect--;
+      cursorSelect();
+    }
     
-    if(currentSelect == 5 && stepLayer == 1){
-      stepLayer=0; 
-      if(currentSelect != lastStep){clearMenu();  }
+    if(currentLayer==1){
+      
+      if(currentSelect == 5 && stepLayer == 1){
+        stepLayer=0; 
+        if(currentSelect != lastStep){clearMenu();  }
+      }
+  
+      if(currentSelect == 4 && stepLayer == 0){
+        stepLayer=1; 
+        if(currentSelect != lastStep){clearMenu();  }
+      }
+        lastStep = currentSelect; 
     }
-
-    if(currentSelect == 4 && stepLayer == 0){
-      stepLayer=1; 
-      if(currentSelect != lastStep){clearMenu();  }
+      
+    if(subLayer==1){
+      if(newPosition < oldPosition && parWeight < 1000) { parWeight++; }
+      else if(newPosition > oldPosition && parWeight != -50){ parWeight--; }
     }
-      lastStep = currentSelect; 
-  }
-    
-  if(subLayer==1){
-    if(newPosition < oldPosition && parWeight < 1000) { parWeight++; }
-    else if(newPosition > oldPosition && parWeight != -50){ parWeight--; }
-  }
-
-  if(subLayer==2 && currentSelect == 1 && flagS == 1){
-    if(newPosition < oldPosition && valueLength < 50) { valueLength++; } 
-    else if(newPosition > oldPosition && valueLength > 0){ valueLength--; }  
-  }
-
-  if(subLayer==2 && currentSelect == 2 && flagS == 1){
-    if(newPosition < oldPosition && valueWidth < 50) {  valueWidth++; }
-    else if(newPosition > oldPosition && valueWidth > 0){ valueWidth--; }
-  }
-
-  if(subLayer==2 && currentSelect == 3 && flagS == 1){
-    if(newPosition < oldPosition && valueHeight < 50) { valueHeight++; }
-    else if(newPosition > oldPosition && valueHeight > 0){ valueHeight--; }
-  }
-
-  if(subLayer==3){
-    if(newPosition < oldPosition && timerLock < 20) {
-      timerLock++;
-      if(timerLock != lastLock){ lcd.setCursor(9,2); lcd.print(panah[2]);}
+  
+    if(subLayer==2 && currentSelect == 1 && flagS == 1){
+      if(newPosition < oldPosition && valueLength < 50) { valueLength++; } 
+      else if(newPosition > oldPosition && valueLength > 0){ valueLength--; }  
     }
-
-    else if(newPosition > oldPosition && timerLock != 0){
-      timerLock--;
-      if(timerLock != lastLock){ lcd.setCursor(4,2); lcd.print(panah[1]); }
+  
+    if(subLayer==2 && currentSelect == 2 && flagS == 1){
+      if(newPosition < oldPosition && valueWidth < 50) {  valueWidth++; }
+      else if(newPosition > oldPosition && valueWidth > 0){ valueWidth--; }
     }
-
-    delay(500);
-    lastLock = timerLock;
-    if(timerLock == lastLock){lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
+  
+    if(subLayer==2 && currentSelect == 3 && flagS == 1){
+      if(newPosition < oldPosition && valueHeight < 50) { valueHeight++; }
+      else if(newPosition > oldPosition && valueHeight > 0){ valueHeight--; }
+    }
+  
+    if(subLayer==3){
+      if(newPosition < oldPosition && timerLock < 20) {
+        timerLock++;
+        if(timerLock != lastLock){ lcd.setCursor(9,2); lcd.print(panah[2]);}
+      }
+  
+      else if(newPosition > oldPosition && timerLock != 0){
+        timerLock--;
+        if(timerLock != lastLock){ lcd.setCursor(4,2); lcd.print(panah[1]); }
+      }
+  
+      delay(500);
+      lastLock = timerLock;
+      if(timerLock == lastLock){lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
+    }
+     
+    if(subLayer==4){
+      if(newPosition < oldPosition && timerSleep < 20) {
+        timerSleep++;
+        if(timerSleep != lastSleep){lcd.setCursor(9,2); lcd.print(panah[2]);}
+      }
+  
+      else if(newPosition > oldPosition && timerSleep != 0){
+        timerSleep--;
+        if(timerSleep != lastSleep){lcd.setCursor(4,2); lcd.print(panah[1]); }
+      }
+  
+      delay(500);
+      lastSleep = timerSleep;
+      if(timerSleep == lastSleep){ lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
+    }
+    oldPosition = newPosition;
   }
-   
-  if(subLayer==4){
-    if(newPosition < oldPosition && timerSleep < 20) {
-      timerSleep++;
-      if(timerSleep != lastSleep){lcd.setCursor(9,2); lcd.print(panah[2]);}
-    }
-
-    else if(newPosition > oldPosition && timerSleep != 0){
-      timerSleep--;
-      if(timerSleep != lastSleep){lcd.setCursor(4,2); lcd.print(panah[1]); }
-    }
-
-    delay(500);
-    lastSleep = timerSleep;
-    if(timerSleep == lastSleep){ lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
-  }
-  oldPosition = newPosition;
- }
 }
 
 
@@ -509,14 +511,16 @@ void updateProgressBar(unsigned long count, unsigned long totalCount, int lineTo
        lcd.write(5);
       }
     }
-       lcd.setCursor(number,lineToPrintOn);
-       lcd.write(remainder); 
-     if(number < 20)
+
+    lcd.setCursor(number,lineToPrintOn);
+    lcd.write(remainder); 
+
+    if(number < 20)
     {
       for(int j = number+1; j <= 20; j++)
       {
         lcd.setCursor(j,lineToPrintOn);
-       lcd.write(0);
+        lcd.write(0);
       }
     }  
  }
@@ -526,47 +530,56 @@ void showSetting(){
   int dataSensor[]={valueLength,valueWidth,valueHeight,0};
   if(currentLayer==0 && subLayer == 0){
 
-   if(flagTr==true){
-  
-    lcd.backlight();
-    lcd.setCursor(0,0);
-    lcd.print("Panjang:");
-    lcd.print((hasilP>=referenceLength)?"00" :(hasilP<10)?"0"+String(hasilP):hasilP);
-    lcd.setCursor(13,0);
-    lcd.print(" cm");
-    
-    lcd.setCursor(0,1);
-    lcd.print("Lebar  :");
-    lcd.print((hasilL>=referenceWidth)?"00" :(hasilL<10)?"0"+String(hasilL):hasilL);
-    lcd.setCursor(13,1);
-    lcd.print(" cm");
-    
-    lcd.setCursor(0,2);
-    lcd.print("Tinggi :");
-    lcd.print((hasilT>=referenceHeight)?"00" :(hasilT<10)?"0"+String(hasilT):hasilT);
-    lcd.setCursor(13,2);
-    lcd.print(" cm");
+    weight = getWeight();
 
-    lcd.setCursor(0,3);
-    lcd.print("Berat  :");
-    lcd.print((weight >= 1000)? weight / 1000 :  weight);
-    lcd.setCursor(13,3);
-    lcd.print((weight >= 1000)?textWeight[1]:textWeight[0]);
-    if(weight >= 5000){
+    if(flagTr==true){
+       
+      weightToInt = weight;
+  
+      lcd.backlight();
+      lcd.setCursor(0,0);
+      lcd.print("Panjang:");
+      lcd.print((hasilP>=referenceLength)?"00" :(hasilP<10)?"0"+String(hasilP):hasilP);
+      lcd.setCursor(12,0);
+      lcd.print(" cm");
+      
+      lcd.setCursor(0,1);
+      lcd.print("Lebar  :");
+      lcd.print((hasilL>=referenceWidth)?"00" :(hasilL<10)?"0"+String(hasilL):hasilL);
+      lcd.setCursor(12,1);
+      lcd.print(" cm");
+      
+      lcd.setCursor(0,2);
+      lcd.print("Tinggi :");
+      lcd.print((hasilT>=referenceHeight)?"00" :(hasilT<10)?"0"+String(hasilT):hasilT);
+      lcd.setCursor(12,2);
+      lcd.print(" cm");
+      lcd.setCursor(0,3);
+      lcd.print("Berat  :");
+      if(weight >= 1000){ lcd.print(weight /1000); } else{ lcd.print(weightToInt); }
+     
+      if(weightToInt < 10)       { clearChar(9,3); clearChar(10,3);  clearChar(11,3);}
+      else if(weightToInt < 100) { clearChar(9,3); clearChar(10,3);  clearChar(11,3); }
+      else if(weightToInt < 1000){ clearChar(11,3); }
+  
+      lcd.setCursor(12,3);
+      lcd.print((weight >= 1000)?textWeight[1]:textWeight[0]);
+  
+      if(weight >= 5000){
         lcd.setCursor(18,3);
         lcd.print("!");
         lcd.setCursor(19,3);
         lcd.write(6);
         if(runObject)buzzerRun(1); 
-    }
-    else{
+      }
+      else{
         lcd.setCursor(18,3);
         lcd.print(" ");
         lcd.setCursor(19,3);
         lcd.print(" ");
         buzzerRun(0);
+      }
     }
-   }
    else{ lcd.noBacklight(); clearMenu();}
   }
 
@@ -574,13 +587,10 @@ void showSetting(){
     lcd.backlight();
     lcd.setCursor(18,cursorLayer );
     lcd.write(byte(7));
-    //Serial.println(String() + "stateRun :"+stateRun);
-    //Serial.println(String() + "currentSelect:"+currentSelect);
     if(currentSelect < 5){
       for(int i=0;i<4;i++){
         lcd.setCursor(0,i);
         lcd.print(menu1[i+1]);
-        //Serial.println(String() + "menu1[i+1]:"+menu1[i+1]);
       }
 
       for(int i=0;i<2;i++){
@@ -593,7 +603,6 @@ void showSetting(){
       for(int i=0;i<currentLength-4;i++){
         lcd.setCursor(0,i);
         lcd.print(menu1[5+i]);
-        //Serial.println(String() + "menu1[5+i]:"+menu1[5+i]);
       }
 
       for(int i=0;i<2;i++){
@@ -606,16 +615,23 @@ void showSetting(){
    
   if(subLayer==1){
     scale.set_scale(calibration_factor);
+    getWeightSet();
+    weightToInt = unitSetting;
+
     lcd.setCursor(0,0);
     lcd.print("BERAT:");
     lcd.setCursor(6,1);
-    lcd.print((getWeightSet() >= 1000)? getWeightSet() / 1000 :  getWeightSet());
-    lcd.setCursor(11,1);
-    lcd.print((getWeightSet() >= 1000)?textWeight[1]:textWeight[0]);
+    if(unitSetting >= 1000){  lcd.print( unitSetting/1000); } else{ lcd.print(weightToInt); }
+
+    if(weightToInt < 10)       { clearChar(7,1); clearChar(8,1);  clearChar(9,1);}
+    else if(weightToInt < 100) { clearChar(7,1); clearChar(8,1); clearChar(9,1);}
+    else if(weightToInt < 1000){ clearChar(9,1); }
+
+    lcd.setCursor(10,1);
+    lcd.print((unitSetting >= 1000)?textWeight[1]:textWeight[0]);
     lcd.setCursor(0,3);
     lcd.print("Parameter : ");
     lcd.print(parWeight);
-    Serial.println(String()+"getWeightSet():"+getWeightSet());
   }
 
   if(subLayer==2){
@@ -653,51 +669,20 @@ void showSetting(){
   }
 }
 
-/*
-void kalkulasi(){
-  int panjang = 0;//hc.dist(0);
-  //delay(60);
-  int lebar   = 0;//hc.dist(1); 
-  delay(60);
-  int tinggi  = hc.dist(2);
-  delay(60); 
-  
-  if(panjang <= referenceLength){
-    hasilP = referenceLength - panjang;
-  }
-  else{ hasilP = 0; }
-  
-  if(lebar <= referenceWidth){
-    hasilL = referenceWidth - lebar;
-  }
-  else{ hasilL = 0; }
-  
-  if(tinggi <= referenceHeight){
-    hasilT = 50 - tinggi;
-  }
-  //else{ hasilT = 0; }
-  lcd.setCursor(0,2);
-    lcd.print("tinggi:");
-    lcd.print((hasilT >= 50)? 0 : hasilT);
-     lcd.setCursor(13,2);
-    lcd.print(" cm");
-
-  length = panjang;
-  width  = lebar;
-  height = tinggi;
-}*/
 
 void kalkulasi(){
   
   unsigned long        tmr = millis();
   static unsigned long saveTmr1 = 0;
   static unsigned long saveTmr2 = 0;
+  static unsigned long saveTmr3 = 0;
   static int           x = 0;
-  static int           panjang,lebar,tinggi;
+  static int           panjang=0,lebar=0,tinggi=0;
+  static int           co;
  
   if(tmr - saveTmr1 > 60 && trigger == true){
     saveTmr1 = tmr;
-  
+    
     switch(x){
       case 0 :
         panjang = hc.dist(0);
@@ -715,12 +700,24 @@ void kalkulasi(){
     x++;
   }
   
-  if(tmr - saveTmr2 > 1000 && trigger == true){
-    saveTmr2 = tmr;
   
-   
-    if(timeRead <= timerLock){
+  if(trigger){ 
+    co = (millis() - saveTmr3)/1000;
+    lcd.setCursor(18,0);
+    lcd.print(co);
+  }else{ 
+    saveTmr3 = millis(); 
+    co=0; 
+  }
+
+  if(tmr - saveTmr2 > 1000 && trigger == true){
+
+    saveTmr2 = tmr;
+
+    if(timeRead < timerLock){
+
       timeRead++;
+         
       if(panjang <= referenceLength){ hasilP = referenceLength - panjang; }
     
       if(lebar <= referenceWidth){ hasilL = referenceWidth - lebar; }
@@ -738,11 +735,12 @@ void kalkulasi(){
       hasilP = hasilP;
       hasilL = hasilL;
       hasilT = hasilT; 
-      //Serial.print(String()+"hasilL:" + hasilL); 
       trigger = false; 
       runObject = false; 
       timeRead=0; 
       stateRun = 0;
+      clearChar(18,0);
+      clearChar(19,0);
     }
   
   }
@@ -787,37 +785,33 @@ float getWeight(){
   static unsigned long saveTmr=0;
   static int objek = 1000;//
  
-  if(tmr - saveTmr > 1000 && runObject == true  && currentLayer == 0){
+  if(tmr - saveTmr > 500 && runObject == true  && currentLayer == 0){
     saveTmr = tmr;
-    units = scale.get_units(),3;
-  
-    if (units < 0 ){ units = 0.00; }
+    units = scale.get_units(),0;
+    if (units < 0 ){ units = 0; }
     if(units < objek && trigger == false){ stateRun = 1; }
-  
-    // ounces = units * 0.035274;
-   
+
     if(units > objek ){
       trigger = true;
       flagTr  = 1;
       stateRun = 0;
       state1=0;
-      clearChar(18,0);
-      clearChar(19,0);
     }
     return units;
   }
 }
 
-float getWeightSet(){
-  unsigned long tmr = millis();
-  static unsigned long saveTmr=0;
+void getWeightSet(){
+  unsigned long tmr2 = millis();
+  static unsigned long saveTmr2;
 
-  if(tmr - saveTmr > 1000){
+  if(tmr2 - saveTmr2 > 500){
     //scale.power_up();
-    saveTmr = tmr;
-    unitSetting = scale.get_units(),3;
-    if (unitSetting < 0 ){ unitSetting = 0.00; }
-    return unitSetting;
+    saveTmr2 = tmr2;
+    unitSetting = scale.get_units(),0;
+    
+    if (unitSetting < 0 ){ unitSetting = 0; }
+    //return unitSetting;
   }
 }
 
@@ -827,28 +821,27 @@ void timerLCD(){
   static int co;
   
   if(timerSleep > 0){ Run = 1; } else{ Run = 0; }
-  //Serial.println(String() + "stateRun :"+stateRun);
   if(stateRun == 1 && Run == 1){
     flagTr=1;
     unsigned long tmrH = millis();
     lcd.setCursor(18,0);
     lcd.print(co);
-    if(state1==0){co = (millis() - saveTmrH)/1000;}
+    if(state1==0){  co = (millis() - saveTmrH)/1000;  }
   }
-
   else{ saveTmrH = millis(); co = 0;  }
   
-  if((millis() - saveTmrH) > Delay && stateRun == 1 && Run == 1)
-  {
-    //Serial.println("tmr run ");
+  if((millis() - saveTmrH) > Delay && stateRun == 1 && Run == 1){
+    
     if(state1==0 && stateRun == 1){state1 = 1;}
+
   }
+
   if(state1 == 1){ flagTr=0; clearChar(18,0); clearChar(19,0); }
 }
 
 void buzzerRun(bool flag){
-  if(flag){digitalWrite(buzzer,HIGH); }
-  else{ digitalWrite(buzzer,LOW); }
+  if(flag){ digitalWrite(buzzer,HIGH); }
+  else    { digitalWrite(buzzer,LOW); }
 }
 
 void cursorSelect(){
