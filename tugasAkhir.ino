@@ -1,9 +1,25 @@
 /*
- * pin Trigger ultrasonik : 5
- * pin Echo ultrasonik 1  : 2
- * pin Echo ultrasonik 2  : 3
- * pin Echo ultrasonik 3  : 4
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+      TUGAS AKHIR V1.0
+///////////////////////////////////////////////
+///////////////////////////////////////////////
+
+/---------CONFIGURASI PIN-----------/
+ * pin Trigger ultrasonik = 5
+ * pin Echo ultrasonik 1  = 2
+ * pin Echo ultrasonik 2  = 3
+ * pin Echo ultrasonik 3  = 4
+
+ * pin DT encode      = 
+ * pin CLK encoder    =
+ * pin button encoder =
+
+ * pin DT LOAD CELL   =
+ * pin CLK LOAD CELL  =
  * 
+ * pin BUZZER         =
+
  * led[0] = indikator run
  * led[1] = indikator lock
  * led[2] = indikator kalibrasi
@@ -28,8 +44,9 @@
 #define buttonReset 2
 #define buzzer 11
 
-int led[]={5,6,7};
+int led[]={ 5, 6, 7};
 
+//---------CONFIGURASI OOP----------//
 HX711 scale(loadCelDTpin, loadCellSCKpin); 
 Encoder myEnc(encoderDTpin, encoderCLKpin);
 OneButton button0(buttonReset, true);
@@ -38,7 +55,7 @@ LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 20 chars
 
 
 
-
+//--------------CONFIGURASI VARIABEL-------------//
 byte cursorLayer = 0;
 byte subLayer=0;
 byte currentLayer =0;
@@ -74,7 +91,7 @@ int referenceLength = 0; // Panjang referensi dalam cm
 int referenceWidth  = 0;  // Lebar referensi dalam cm
 int referenceHeight = 0; // Tinggi referensi dalam cm
 
-float calibration_factor = -9; //rubah nilai ini sesuai hasil dari nilai kalibrasi
+float calibration_factor = -9; //NILAI KALIBRASI DEFAULT
 
 String menu1[]={"5","kalibrasi Beban","Kalibrasi Dimensi","Set Timer Lock","Set Timer Sleep","Back"};
 String menuJarak[]={"4","Sensor 1:","Sensor 2:","Sensor 3:","Back"};
@@ -207,31 +224,30 @@ void setup() {
 //    updateProgressBar(i, 100, 1);
 //    delay(50);
 //  }
-  Serial.println(String()+"referenceLength:"+referenceLength);
-  Serial.println(String()+"referenceWidth :"+referenceWidth);
-  Serial.println(String()+"referenceHeight:"+referenceHeight);
-  Serial.println(String()+"calibration_factor:"+calibration_factor);
-  lcd.clear();
+  // Serial.println(String()+"referenceLength:"+referenceLength);
+  // Serial.println(String()+"referenceWidth :"+referenceWidth);
+  // Serial.println(String()+"referenceHeight:"+referenceHeight);
+  // Serial.println(String()+"calibration_factor:"+calibration_factor);
+  
   // Serial.println(String()+"timerSleep:"+timerSleep);
   // Serial.println("build run");
   // Serial.println(String() + "trigger  :" + trigger);
   // Serial.println(String() + "runObject:" + runObject);
   // Serial.println(String() + "timeRead :" + timeRead);
   // Serial.println(String() + "stateRun :" + stateRun);
+  lcd.clear();
 }
 
 void loop() {
     button0.tick();
     getRotary();
     kalkulasi();
-    //weight = getWeight();
-    //getWeightSet();
     timerLCD(); 
     showSetting();
     showLed();
-    //Serial.println(String()+"state1:"+ state1);
 }
 
+//----------------TAMPILAN INDIKATOR LED---------------//
 void showLed(){
     if(state1 == 1 && runObject == 1 && currentLayer == 0){getIndikator(0,1,0);}
     else if(state1 == 0 && runObject == 1 && currentLayer == 0){getIndikator(0,0,1); getIndikator(1,0,0); getIndikator(2,0,0);}
@@ -244,7 +260,7 @@ void showLed(){
     else if(currentLayer != 1 && subLayer == 4){ getIndikator(2,1,0); }
 }
 
-
+//-------------------PROGRAM BUTTON SINGLE CLICK------------------------//
 void singleClick(){
  
   Serial.println("button 1 klik run");
@@ -377,6 +393,7 @@ void singleClick(){
  }
 }
 
+//------------------------PROGRAM BUTTON DOUBLE CLICK--------------------------//
 void doubleclick1(){
   Serial.println("button 2 klik run");
  if(currentLayer == 0){
@@ -390,6 +407,7 @@ void doubleclick1(){
  }
 }
 
+//----------------------PROGRAM MENGAMBIL DATA DARI ROTARY ENCODE-----------------------//
 void getRotary(){
   newPosition = myEnc.read()/4;
   switch(currentLayer){
@@ -427,6 +445,7 @@ void getRotary(){
       cursorSelect();
     }
     
+    //-----TAMPILAN MENU------//
     if(currentLayer==1){
       
       if(currentSelect == 5 && stepLayer == 1){
@@ -440,12 +459,14 @@ void getRotary(){
       }
         lastStep = currentSelect; 
     }
-      
+    
+    //-------------TAMPILAN SUB MENU 1 (SET SENSOR BERAT)---------------//
     if(subLayer==1){
       if(newPosition < oldPosition && parWeight < 1000) { parWeight++; }
       else if(newPosition > oldPosition && parWeight != -50){ parWeight--; }
     }
   
+    //-------------TAMPILAN SUB MENU 2 (SET SENSOR JARAK/DIMENSI)---------------//
     if(subLayer==2 && currentSelect == 1 && flagS == 1){
       if(newPosition < oldPosition && valueLength < 50) { valueLength++; } 
       else if(newPosition > oldPosition && valueLength > 0){ valueLength--; }  
@@ -461,6 +482,7 @@ void getRotary(){
       else if(newPosition > oldPosition && valueHeight > 0){ valueHeight--; }
     }
   
+    //-------------TAMPILAN SUB MENU 3 (SET TIMER LOCK LCD)---------------//
     if(subLayer==3){
       if(newPosition < oldPosition && timerLock < 20) {
         timerLock++;
@@ -476,7 +498,8 @@ void getRotary(){
       lastLock = timerLock;
       if(timerLock == lastLock){lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
     }
-     
+    
+    //-------------TAMPILAN SUB MENU 4 (SET TIMER SLEEP LCD)---------------//
     if(subLayer==4){
       if(newPosition < oldPosition && timerSleep < 20) {
         timerSleep++;
@@ -496,7 +519,7 @@ void getRotary(){
   }
 }
 
-
+//--------------ANIMASI LOADING------------------//
 void updateProgressBar(unsigned long count, unsigned long totalCount, int lineToPrintOn)
  {
     double factor    = totalCount/100.0;          //See note above!
@@ -525,7 +548,7 @@ void updateProgressBar(unsigned long count, unsigned long totalCount, int lineTo
     }  
  }
 
-
+//-----------------------TAMPILAN LCD--------------------//
 void showSetting(){
   int dataSensor[]={valueLength,valueWidth,valueHeight,0};
   if(currentLayer==0 && subLayer == 0){
@@ -669,7 +692,7 @@ void showSetting(){
   }
 }
 
-
+//----------------PROGRAM MENGHITUNG VALUE SENSOR ULTRASONIK-------------------//
 void kalkulasi(){
   
   unsigned long        tmr = millis();
@@ -749,7 +772,7 @@ void kalkulasi(){
   width  = lebar;
   height = tinggi;
 }
-
+//----------------DEBUGGING PROGRAM KE SERIAL MONITOR--------------------//
 void showMonitor(){
   Serial.print("Panjang: ");
   Serial.print(length);
@@ -779,6 +802,7 @@ void showMonitor(){
   
 }
 
+//---------MENGAMBIL VALUE DARI SENSOR LOADCELL UNTUK ANIMASI AWAL-------------//
 float getWeight(){
  
   unsigned long tmr = millis();
@@ -801,6 +825,7 @@ float getWeight(){
   }
 }
 
+//---------MENGAMBIL VALUE DARI SENSOR LOADCELL UNTUK KALIBRASI LOADCELL-------------//
 void getWeightSet(){
   unsigned long tmr2 = millis();
   static unsigned long saveTmr2;
@@ -815,6 +840,7 @@ void getWeightSet(){
   }
 }
 
+//-----------MENGHITUNG WAKTU MUNDUR SLEEP LCD----------//
 void timerLCD(){
   static int Run;
   int Delay = timerSleep*1000;
@@ -839,11 +865,13 @@ void timerLCD(){
   if(state1 == 1){ flagTr=0; clearChar(18,0); clearChar(19,0); }
 }
 
+//--------BUZZER-----------//
 void buzzerRun(bool flag){
   if(flag){ digitalWrite(buzzer,HIGH); }
   else    { digitalWrite(buzzer,LOW); }
 }
 
+//---------------ANIMASI PANAH-------------//
 void cursorSelect(){
   switch (currentSelect){
     case 1:
@@ -900,7 +928,7 @@ void clearMenu(){
   for(int i=0;i<20;i++){lcd.setCursor (i,3); lcd.print(" ");}
 }
 
-
+//-----------------PROGRAM UNTUK MEMILAH INDIKATOR-------------//
 void getIndikator(int conLed,int stateRun,int stateLed){
 
   unsigned long tmr = millis();
