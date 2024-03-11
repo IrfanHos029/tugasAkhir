@@ -37,10 +37,10 @@
 #define encoderCLKpin 4
 #define loadCelDTpin 8
 #define loadCellSCKpin 9
-#define triggerPin A6
-#define echoPin1   A3//2
-#define echoPin2   A4//3
-#define echoPin3   A5
+#define triggerPin 14
+#define echoPin1   15//2
+#define echoPin2   16//3
+#define echoPin3   17
 #define buttonReset 2
 #define buzzer 11
 
