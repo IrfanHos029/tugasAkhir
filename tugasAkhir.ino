@@ -33,24 +33,24 @@
 #include <Encoder.h>
 #include <EEPROM.h>
 
-#define encoderDTpin 3
-#define encoderCLKpin 4
-#define loadCelDTpin 8
-#define loadCellSCKpin 9
-#define triggerPin 5
-#define echoPin1   11//2
-#define echoPin2   10//3
-#define echoPin3   17
-#define buttonReset 2
-#define buzzer 20//11
+#define encoderDTpin 3    //STATIC
+#define encoderCLKpin 4   //STATIC
+#define loadCelDTpin 9    //STATIC
+#define loadCellSCKpin 10 //STATIC
+#define triggerPin 5      //STATIC
+#define echoPin1   6      //STATIC
+#define echoPin2   7      //STATIC
+#define echoPin3   8      //STATIC
+#define buttonReset 2     //STATIC
+#define buzzer 22         //STATIC
 
-int led[]={ 14, 15, 16};
+int led[]={ 11, 12, 13};  //STATIC
 
 //---------CONFIGURASI OOP----------//
 HX711 scale(loadCelDTpin, loadCellSCKpin); 
 Encoder myEnc(encoderDTpin, encoderCLKpin);
 OneButton button0(buttonReset, true);
-HCSR04 hc(triggerPin, new int[2]{echoPin1, echoPin2}, 2); //initialisation class HCSR04 (trig pin , echo pin, number of sensor)
+HCSR04 hc(triggerPin, new int[3]{echoPin1, echoPin2,echoPin3}, 3); //initialisation class HCSR04 (trig pin , echo pin, number of sensor)
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 20 chars and 4 line display
 
 
@@ -277,6 +277,7 @@ void singleClick(){
     timeRead  = 0; 
     state1=0;
     stateRun  = 0;
+    scale.tare();
     Serial.println(String() + "trigger  :" + trigger);
     Serial.println(String() + "runObject:" + runObject);
     Serial.println(String() + "timeRead :" + timeRead);
@@ -376,8 +377,6 @@ void singleClick(){
     break;
 
     case 4 :
-     //flagS=!flagS;
-
      clearMenu();
      subLayer = 5;
     break;
@@ -392,9 +391,9 @@ void singleClick(){
       EEPROM.write(1,valueLength);
       EEPROM.write(2,valueWidth);
       EEPROM.write(3,valueHeight);
-      referenceLength= valueLength;
-      referenceWidth = valueWidth;
-      referenceHeight= valueHeight;
+      referenceLength = valueLength;
+      referenceWidth  = valueWidth;
+      referenceHeight = valueHeight; 
     break;
   };
  }
@@ -589,7 +588,7 @@ void showSetting(){
       if(weight >= 1000){ lcd.print(weight /1000); } else{ lcd.print(weightToInt); }
      
       if(weightToInt < 10)       { clearChar(9,3); clearChar(10,3);  clearChar(11,3);}
-      else if(weightToInt < 100) { clearChar(9,3); clearChar(10,3);  clearChar(11,3); }
+      else if(weightToInt < 100) { clearChar(10,3);  clearChar(11,3); }
       else if(weightToInt < 1000){ clearChar(11,3); }
   
       lcd.setCursor(12,3);
@@ -654,7 +653,7 @@ void showSetting(){
     if(unitSetting >= 1000){  lcd.print( unitSetting/1000); } else{ lcd.print(weightToInt); }
 
     if(weightToInt < 10)       { clearChar(7,1); clearChar(8,1);  clearChar(9,1);}
-    else if(weightToInt < 100) { clearChar(7,1); clearChar(8,1); clearChar(9,1);}
+    else if(weightToInt < 100) { clearChar(8,1); clearChar(9,1);}
     else if(weightToInt < 1000){ clearChar(9,1); }
 
     lcd.setCursor(10,1);
@@ -667,13 +666,6 @@ void showSetting(){
   if(subLayer==2){
     lcd.setCursor(17,cursorLayer ); 
     lcd.write(byte(7));
-     
-    // for(int i=0;i<currentLength;i++){
-    //   lcd.setCursor(0,i);
-    //   lcd.print(menuJarak[i+1]);  
-    //   lcd.setCursor(13,(i==3)?2:i);
-    //   lcd.print("CM");
-    // }
 
     if(currentSelect < 5){
       for(int i=0;i<4;i++){
@@ -690,10 +682,9 @@ void showSetting(){
         if(flagS){lcd.setCursor(12,cursorLayer); lcd.print("*");}
 
         for(int i=0;i<2;i++){
-        lcd.setCursor(19,i);
-        lcd.print("|");
-        }
-        
+          lcd.setCursor(19,i);
+          lcd.print("|");
+        } 
       }
     }
 
@@ -728,24 +719,33 @@ void showSetting(){
   }
 
   if(subLayer==5){
-    //lcd.clear();
-    valueLength = hc.dist(0);
-    delay(60);
-    valueWidth  = hc.dist(1);
-    delay(60);
-    valueHeight = hc.dist(2);
-    lcd.setCursor(0,0);
-    lcd.print("panjang: ");
-    lcd.print(hc.dist(0));
+    for(int i = 0; i < 3; i++){
+      if(i==0){ referenceLength = hc.dist(0); buzzerRun(1);}
+      else if(i==1){ referenceWidth  = hc.dist(1); buzzerRun(0);}
+      else if(i==2){ referenceHeight  = hc.dist(2); buzzerRun(1);}
+      delay(50);
+    }
+    valueLength = referenceLength;
+    valueWidth  = referenceWidth;
+    valueHeight = referenceHeight;
+    lcd.setCursor(1,0);
+    lcd.print("KALIBRASI SELESAI");
     lcd.setCursor(0,1);
-    lcd.print("lebar: ");
-    lcd.print(valueWidth);
+    lcd.print("Panjang: ");
+    lcd.print((referenceLength<10)?"0"+String(referenceLength):referenceLength);
     lcd.setCursor(0,2);
-    lcd.print("tinggi: ");
-    lcd.print(valueHeight);
-    // subLayer = 2;
-    // delay(2000);
-    // lcd.clear();
+    lcd.print("Lebar  : ");
+    lcd.print((referenceWidth<10)?"0"+String(referenceWidth):referenceWidth);
+    lcd.setCursor(0,3);
+    lcd.print("Tinggi : ");
+    lcd.print((referenceHeight<10)?"0" + String(referenceHeight):referenceHeight);
+    buzzerRun(0);
+    subLayer = 2;
+    // EEPROM.write(1,valueLength);
+    // EEPROM.write(2,valueWidth);
+    // EEPROM.write(3,valueHeight);
+    delay(3000);
+    lcd.clear();
 
   }
 }
@@ -761,42 +761,19 @@ void kalkulasi(){
   static int           panjang=0,lebar=0,tinggi=0;
   static int           co;
  
-  if(tmr - saveTmr1 > 80 && trigger == true){
+  if(tmr - saveTmr1 > 50 && trigger == true){
     saveTmr1 = tmr;
     
-    // switch(x){
-    //   case 0 :
-    //     panjang = hc.dist(0);
-    //     break;
-    //   case 1 :
-    //     lebar   = hc.dist(1);
-    //     break;
-    //   case 2 :
-    //     tinggi  = hc.dist(2);
-    //     break;
-    //   case 3 :
-    //     x = 0;
-    //     break;
-    // };
-    if(x==0){ panjang = hc.dist(0); }
-    else if(x==1){ lebar  = hc.dist(1); }
-    else if(x==2){ tinggi  = hc.dist(2); }
-    else if(x==3){ x = 0; }
-    x++;
+    for(int i = 0; i < 3; i++){
+      if(i==0){ panjang = hc.dist(0); }
+      else if(i==1){ lebar  = hc.dist(1); }
+      else if(i==2){ tinggi  = hc.dist(2); }
+      delay(50);
+    }
+    
   }
-  
-  Serial.print("Panjang: ");
-  Serial.print(panjang);
-  Serial.println(" cm");
- 
-  Serial.print("Lebar: ");
-  Serial.print(lebar);
-  Serial.println(" cm");
- 
-  Serial.print("Tinggi: ");
-  Serial.print(tinggi);
-  Serial.println(" cm");
-  
+
+
   if(trigger){ 
     co = (millis() - saveTmr3)/1000;
     lcd.setCursor(18,0);
@@ -814,11 +791,8 @@ void kalkulasi(){
 
     saveTmr2 = tmr;
 
-    if(timeRead < timerLock){
+    if(timeRead < timerLock){ timeRead++;  }
 
-      timeRead++;
-      
-    }
     else{
       lcd.noBacklight();
       buzzerRun(1); 
@@ -837,16 +811,13 @@ void kalkulasi(){
     }
   
   }
-
-  // if(trigger==0){
-    
-     
-  // }
   
   length = panjang;
   width  = lebar;
   height = tinggi;
 }
+
+
 //----------------DEBUGGING PROGRAM KE SERIAL MONITOR--------------------//
 void showMonitor(){
   Serial.print("Panjang: ");
@@ -882,7 +853,7 @@ float getWeight(){
  
   unsigned long tmr = millis();
   static unsigned long saveTmr=0;
-  static int objek = 1000;//
+  static int objek = 1;//
  
   if(tmr - saveTmr > 500 && runObject == true  && currentLayer == 0){
     saveTmr = tmr;
