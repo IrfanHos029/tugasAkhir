@@ -66,15 +66,17 @@ bool stateRun= 1;
 bool runObject = true;
 bool trigger   = false;
 bool state1 = 0;
-int hasilP=0,hasilL=0,hasilT=0;
 int  length,height,width;
 int  timerFlag;
 int  timeRead = 0;
 int lastStep,lastSleep,lastLock;
 int timerLock,timerSleep;
-int valueLength = 0;
-int valueWidth = 0;
-int valueHeight = 0;
+float hasilP = 0.0;
+float hasilL = 0.0;
+float hasilT = 0.0;
+float valueLength = 0.0;
+float valueWidth  = 0.0;
+float valueHeight = 0.0;
 int currentSelect = 1;
 int currentLength;
 int units   = -1;
@@ -87,9 +89,9 @@ long oldPosition  = 0;
 long newPosition = 0;
 unsigned long saveTmrH;
 
-int referenceLength = 0; // Panjang referensi dalam cm
-int referenceWidth  = 0;  // Lebar referensi dalam cm
-int referenceHeight = 0; // Tinggi referensi dalam cm
+float referenceLength = 0.0; // Panjang referensi dalam cm
+float referenceWidth  = 0.0;  // Lebar referensi dalam cm
+float referenceHeight = 0.0; // Tinggi referensi dalam cm
 
 float calibration_factor = -9; //NILAI KALIBRASI DEFAULT
 
@@ -291,6 +293,7 @@ void singleClick(){
       subLayer = 1;
       currentLayer = -1;
       currentSelect = 1;
+      scale.tare();
       cursorSelect();
     break;
 
@@ -474,18 +477,18 @@ void getRotary(){
   
     //-------------TAMPILAN SUB MENU 2 (SET SENSOR JARAK/DIMENSI)---------------//
     if(subLayer==2 && currentSelect == 1 && flagS == 1){
-      if(newPosition < oldPosition && valueLength < 50) { valueLength++; } 
-      else if(newPosition > oldPosition && valueLength > 0){ valueLength--; }  
+      if(newPosition < oldPosition && valueLength < 50) { valueLength+=0.1; } 
+      else if(newPosition > oldPosition && valueLength > 0){ valueLength-=0.1; }  
     }
   
     if(subLayer==2 && currentSelect == 2 && flagS == 1){
-      if(newPosition < oldPosition && valueWidth < 50) {  valueWidth++; }
-      else if(newPosition > oldPosition && valueWidth > 0){ valueWidth--; }
+      if(newPosition < oldPosition && valueWidth < 50) {  valueWidth+=0.1; }
+      else if(newPosition > oldPosition && valueWidth > 0){ valueWidth-=0.1; }
     }
   
     if(subLayer==2 && currentSelect == 3 && flagS == 1){
-      if(newPosition < oldPosition && valueHeight < 50) { valueHeight++; }
-      else if(newPosition > oldPosition && valueHeight > 0){ valueHeight--; }
+      if(newPosition < oldPosition && valueHeight < 50) { valueHeight+=0.1; }
+      else if(newPosition > oldPosition && valueHeight > 0){ valueHeight-=0.1; }
     }
   
     //-------------TAMPILAN SUB MENU 3 (SET TIMER LOCK LCD)---------------//
@@ -568,21 +571,22 @@ void showSetting(){
       lcd.backlight();
       lcd.setCursor(0,0);
       lcd.print("Panjang:");
-      lcd.print((hasilP>=referenceLength)?"00" :(hasilP<10)?"0"+String(hasilP):hasilP);
+      lcd.print((hasilP<10)?"0" + char(hasilP) : hasilP,1);
       lcd.setCursor(12,0);
       lcd.print(" cm");
       
       lcd.setCursor(0,1);
       lcd.print("Lebar  :");
-      lcd.print((hasilL>=referenceWidth)?"00" :(hasilL<10)?"0"+String(hasilL):hasilL);
+      lcd.print((hasilL<10)?"0" + hasilL : hasilL,1); 
       lcd.setCursor(12,1);
       lcd.print(" cm");
       
       lcd.setCursor(0,2);
       lcd.print("Tinggi :");
-      lcd.print((hasilT>=referenceHeight)?"00" :(hasilT<10)?"0"+String(hasilT):hasilT);
+      lcd.print((hasilT<10)? "0" + hasilT : hasilT,1);
       lcd.setCursor(12,2);
       lcd.print(" cm");
+
       lcd.setCursor(0,3);
       lcd.print("Berat  :");
       if(weight >= 1000){ lcd.print(weight /1000); } else{ lcd.print(weightToInt); }
@@ -664,22 +668,22 @@ void showSetting(){
   }
 
   if(subLayer==2){
-    lcd.setCursor(17,cursorLayer ); 
+    lcd.setCursor(18,cursorLayer ); 
     lcd.write(byte(7));
 
     if(currentSelect < 5){
       for(int i=0;i<4;i++){
         lcd.setCursor(0,i);
         lcd.print(menuJarak[i+1]);
-        lcd.setCursor(13,(i==3)?2:i);
+        lcd.setCursor(15,(i==3)?2:i);
         lcd.print("CM");
         lcd.setCursor(10,0);
-        lcd.print((valueLength<10)?"0"+String(valueLength):valueLength); 
+        lcd.print(valueLength,1); 
         lcd.setCursor(10,1);
-        lcd.print((valueWidth<10)?"0"+String(valueWidth):valueWidth); 
+        lcd.print(valueWidth,1); 
         lcd.setCursor(10,2);
-        lcd.print((valueHeight<10)?"0" + String(valueHeight):valueHeight); 
-        if(flagS){lcd.setCursor(12,cursorLayer); lcd.print("*");}
+        lcd.print(valueHeight,1); 
+        if(flagS){lcd.setCursor(9,cursorLayer); lcd.print("*");}
 
         for(int i=0;i<2;i++){
           lcd.setCursor(19,i);
@@ -720,33 +724,41 @@ void showSetting(){
 
   if(subLayer==5){
     for(int i = 0; i < 3; i++){
-      if(i==0){ referenceLength = hc.dist(0); buzzerRun(1);}
-      else if(i==1){ referenceWidth  = hc.dist(1); buzzerRun(0);}
-      else if(i==2){ referenceHeight  = hc.dist(2); buzzerRun(1);}
+      if(i==0){ referenceLength = hc.dist(0) + 1; buzzerRun(1);}
+      else if(i==1){ referenceWidth  = hc.dist(1) + 1; buzzerRun(0);}
+      else if(i==2){ referenceHeight  = hc.dist(2) + 1; buzzerRun(1);}
       delay(50);
     }
+    
     valueLength = referenceLength;
     valueWidth  = referenceWidth;
     valueHeight = referenceHeight;
+
     lcd.setCursor(1,0);
     lcd.print("KALIBRASI SELESAI");
+
     lcd.setCursor(0,1);
     lcd.print("Panjang: ");
-    lcd.print((referenceLength<10)?"0"+String(referenceLength):referenceLength);
+    lcd.print(referenceLength,1);
+    lcd.setCursor(15,1);
+    lcd.print(" CM");
+
     lcd.setCursor(0,2);
     lcd.print("Lebar  : ");
-    lcd.print((referenceWidth<10)?"0"+String(referenceWidth):referenceWidth);
+    lcd.print(referenceWidth,1);
+    lcd.setCursor(15,2);
+    lcd.print(" CM");
+
     lcd.setCursor(0,3);
     lcd.print("Tinggi : ");
-    lcd.print((referenceHeight<10)?"0" + String(referenceHeight):referenceHeight);
+    lcd.print(referenceHeight,1);
+    lcd.setCursor(15,3);
+    lcd.print(" CM");
+
     buzzerRun(0);
     subLayer = 2;
-    // EEPROM.write(1,valueLength);
-    // EEPROM.write(2,valueWidth);
-    // EEPROM.write(3,valueHeight);
     delay(3000);
     lcd.clear();
-
   }
 }
 
@@ -757,17 +769,17 @@ void kalkulasi(){
   static unsigned long saveTmr1 = 0;
   static unsigned long saveTmr2 = 0;
   static unsigned long saveTmr3 = 0;
-  static int           x = 0;
-  static int           panjang=0,lebar=0,tinggi=0;
+  //static int           x = 0;
+  static float         panjang = 0.0,lebar = 0.0,tinggi = 0.0;
   static int           co;
  
   if(tmr - saveTmr1 > 50 && trigger == true){
     saveTmr1 = tmr;
     
     for(int i = 0; i < 3; i++){
-      if(i==0){ panjang = hc.dist(0); }
-      else if(i==1){ lebar  = hc.dist(1); }
-      else if(i==2){ tinggi  = hc.dist(2); }
+      if(i==0){ panjang = hc.dist(0) + 1; }
+      else if(i==1){ lebar  = hc.dist(1) + 1; }
+      else if(i==2){ tinggi  = hc.dist(2) + 1; }
       delay(50);
     }
     
@@ -781,6 +793,10 @@ void kalkulasi(){
     if(panjang <= referenceLength){ hasilP = referenceLength - panjang; }
     if(lebar <= referenceWidth){ hasilL = referenceWidth - lebar; }  
     if(tinggi <= referenceHeight){  hasilT = referenceHeight - tinggi; }
+
+    if(hasilP >= referenceLength){ hasilP = 0.0; }
+    if(hasilL >= referenceWidth ){ hasilL = 0.0; }
+    if(hasilT >= referenceHeight){ hasilT = 0.0; }
     //showMonitor();
   }else{ 
     saveTmr3 = millis(); 
