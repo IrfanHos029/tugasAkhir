@@ -7,22 +7,22 @@
 
 /---------CONFIGURASI PIN-----------/
  * pin Trigger ultrasonik = 5
- * pin Echo ultrasonik 1  = 2
- * pin Echo ultrasonik 2  = 3
- * pin Echo ultrasonik 3  = 4
+ * pin Echo ultrasonik 1  = 6
+ * pin Echo ultrasonik 2  = 7
+ * pin Echo ultrasonik 3  = 8
 
- * pin DT encode      = 
- * pin CLK encoder    =
- * pin button encoder =
+ * pin DT encode      = 3
+ * pin CLK encoder    = 4
+ * pin button encoder = 2
 
- * pin DT LOAD CELL   =
- * pin CLK LOAD CELL  =
+ * pin DT LOAD CELL   = 9
+ * pin CLK LOAD CELL  = 10
  * 
- * pin BUZZER         =
+ * pin BUZZER         = 22
 
- * led[0] = indikator run
- * led[1] = indikator lock
- * led[2] = indikator kalibrasi
+ * led[0] <HIJAU> = 11 ->indikator run
+ * led[1] <MERAH> = 12 ->indikator lock
+ * led[2] <BIRU>  = 13 ->indikator kalibrasi
  */
  
 #include <Wire.h> 
@@ -33,17 +33,22 @@
 #include <Encoder.h>
 #include <EEPROM.h>
 
+//------rotary encoder-------//
 #define encoderDTpin 3    //STATIC
 #define encoderCLKpin 4   //STATIC
+//--------load cell----------//
 #define loadCelDTpin 9    //STATIC
 #define loadCellSCKpin 10 //STATIC
+//--------ultrasonik---------//
 #define triggerPin 5      //STATIC
 #define echoPin1   6      //STATIC
 #define echoPin2   7      //STATIC
 #define echoPin3   8      //STATIC
+//----------button-----------//
 #define buttonReset 2     //STATIC
+//----------buzzer-----------//
 #define buzzer 22         //STATIC
-
+//------led indikator--------//
 int led[]={ 11, 12, 13};  //STATIC
 
 //---------CONFIGURASI OOP----------//
@@ -571,19 +576,22 @@ void showSetting(){
       lcd.backlight();
       lcd.setCursor(0,0);
       lcd.print("Panjang:");
-      lcd.print((hasilP<10)?"0" + char(hasilP) : hasilP,1);
+      lcd.print(hasilP,1);
+      if(hasilP<10.0){  lcd.setCursor(11,0); lcd.print(" "); } 
       lcd.setCursor(12,0);
       lcd.print(" cm");
       
       lcd.setCursor(0,1);
       lcd.print("Lebar  :");
-      lcd.print((hasilL<10)?"0" + hasilL : hasilL,1); 
+      lcd.print(hasilL,1); 
+      if(hasilL<10){ lcd.setCursor(11,1); lcd.print(" "); }
       lcd.setCursor(12,1);
       lcd.print(" cm");
       
       lcd.setCursor(0,2);
       lcd.print("Tinggi :");
-      lcd.print((hasilT<10)? "0" + hasilT : hasilT,1);
+      lcd.print(hasilT,1);
+      if(hasilT<10){ lcd.setCursor(11,2); lcd.print(" "); }
       lcd.setCursor(12,2);
       lcd.print(" cm");
 
@@ -780,7 +788,7 @@ void kalkulasi(){
       if(i==0){ panjang = hc.dist(0) + 1; }
       else if(i==1){ lebar  = hc.dist(1) + 1; }
       else if(i==2){ tinggi  = hc.dist(2) + 1; }
-      delay(50);
+      delay(60);
     }
     
   }
@@ -790,14 +798,14 @@ void kalkulasi(){
     co = (millis() - saveTmr3)/1000;
     lcd.setCursor(18,0);
     lcd.print(co);
-    if(panjang <= referenceLength){ hasilP = referenceLength - panjang; }
-    if(lebar <= referenceWidth){ hasilL = referenceWidth - lebar; }  
-    if(tinggi <= referenceHeight){  hasilT = referenceHeight - tinggi; }
+    if(panjang <= referenceLength){ hasilP = referenceLength - panjang; } else{  hasilP = 0.0; }
+    if(lebar <= referenceWidth){ hasilL = referenceWidth - lebar; }       else{  hasilL = 0.0; }
+    if(tinggi <= referenceHeight){  hasilT = referenceHeight - tinggi; }  else{  hasilT = 0.0; }
 
-    if(hasilP >= referenceLength){ hasilP = 0.0; }
-    if(hasilL >= referenceWidth ){ hasilL = 0.0; }
-    if(hasilT >= referenceHeight){ hasilT = 0.0; }
-    //showMonitor();
+    //if(hasilP >= referenceLength){ hasilP = 0.0; }
+    // if(hasilL >= referenceWidth ){ hasilL = 0.0; }
+    // if(hasilT >= referenceHeight){ hasilT = 0.0; }
+    showMonitor();
   }else{ 
     saveTmr3 = millis(); 
     co=0; 
