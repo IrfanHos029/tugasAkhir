@@ -28,7 +28,8 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include <HCSR04.h>
-#include "HX711.h"
+//#include "HX711.h"
+#include <HX711_ADC.h>
 #include <OneButton.h>
 #include <Encoder.h>
 #include <EEPROM.h>
@@ -52,7 +53,7 @@
 int led[]={ 11, 12, 13};  //STATIC
 
 //---------CONFIGURASI OOP----------//
-HX711 scale(loadCelDTpin, loadCellSCKpin); 
+HX711_ADC scale(loadCelDTpin, loadCellSCKpin); 
 Encoder myEnc(encoderDTpin, encoderCLKpin);
 OneButton button0(buttonReset, true);
 HCSR04 hc(triggerPin, new int[3]{echoPin1, echoPin2,echoPin3}, 3); //initialisation class HCSR04 (trig pin , echo pin, number of sensor)
@@ -93,6 +94,8 @@ float weight;
 long oldPosition  = 0;
 long newPosition = 0;
 unsigned long saveTmrH;
+int conCal =0;
+//int conLevel = 0;
 
 float referenceLength = 0.0; // Panjang referensi dalam cm
 float referenceWidth  = 0.0;  // Lebar referensi dalam cm
@@ -220,8 +223,14 @@ void setup() {
   referenceWidth = valueWidth;
   referenceHeight= valueHeight;
   calibration_factor = parWeight;
-  scale.set_scale(calibration_factor);
-  scale.tare();
+  scale.begin();
+
+  unsigned long stabilizingtime = 2000; // preciscion right after power-up can be improved by adding a few seconds of stabilizing time
+  boolean _tare = true; //set this to false if you don't want tare to be performed in the next step
+  scale.start(stabilizingtime, _tare);
+
+  scale.setCalFactor(calibration_factor);
+  //scale.tare();
 //  for(int i = 0; i < 100; i++){
 //    lcd.setCursor(0,0);
 //    lcd.print("LOADING..");
@@ -298,7 +307,7 @@ void singleClick(){
       subLayer = 1;
       currentLayer = -1;
       currentSelect = 1;
-      scale.tare();
+      conCal = 1;
       cursorSelect();
     break;
 
@@ -329,22 +338,31 @@ void singleClick(){
 
     case 5 :
       clearMenu();
+      scale.tare();
       stepLayer = 1;
       currentLayer = 0;
       timeRead  = 0; 
       timerFlag = 0;
       state1=0;
+      
     break;
   };
  }
  
  else if(currentLayer != 1 && subLayer == 1){
   clearMenu();
+  lcd.setCursor(1,1);
+  lcd.print("KALIBRASI SELESAI");
   subLayer = 0;
   currentLayer = 1;
   currentSelect = 1;
   cursorSelect();
+  conCal = 0;
+  scale.refreshDataSet();
   EEPROM.write(0,parWeight);
+  scale.getNewCalibration(parWeight); //get the new calibration value
+  Serial.println("KALIBRASI SELESAI");
+  clearMenu();
  }
 
  else if(currentLayer != 1 && subLayer == 3 ){
@@ -653,10 +671,50 @@ void showSetting(){
     }
   }
 
-   
   if(subLayer==1){
-    scale.set_scale(calibration_factor);
-    getWeightSet();
+     static int conLevel=0;
+    if(conCal==1){
+      unsigned long tmr = millis();
+      static unsigned long save = 0;
+      
+      scale.update();
+      if(tmr - save > 500){
+        save = tmr;
+        if(conLevel==10){scale.tareNoDelay();   }
+        lcd.setCursor(0,1);
+        lcd.print("KOSONGKAN TIMBANGAN!");
+        conLevel++;
+      }
+      
+      if (scale.getTareStatus() == true ) {
+        conLevel = 0;
+        conCal = 2;
+        lcd.clear();
+      }
+      Serial.println(String() + "conLevel:" + conLevel);
+    }
+
+    else if(conCal==2){
+      
+      scale.update();
+      lcd.setCursor(3,0);
+      lcd.print("TARUH BEBAN!!!");
+      lcd.setCursor(0,2);
+      lcd.print("Parameter : ");
+      lcd.print(int(parWeight));
+      lcd.print(" Gram");
+      
+    }
+    
+  }
+   
+  /*if(subLayer==1){
+    // scale.set_scale(calibration_factor);
+    // getWeightSet();
+    if (scale.getTareStatus() == true) {
+      Serial.println("Tare complete");
+      _resume = true;
+    }
     weightToInt = unitSetting;
 
     lcd.setCursor(0,0);
@@ -673,7 +731,7 @@ void showSetting(){
     lcd.setCursor(0,3);
     lcd.print("Parameter : ");
     lcd.print(parWeight);
-  }
+  }*/
 
   if(subLayer==2){
     lcd.setCursor(18,cursorLayer ); 
@@ -879,9 +937,9 @@ float getWeight(){
   static unsigned long saveTmr=0;
   static int objek = 1;//
  
-  if(tmr - saveTmr > 500 && runObject == true  && currentLayer == 0){
-    saveTmr = tmr;
-    units = scale.get_units(),0;
+  if(tmr - saveTmr > 50 && runObject == true  && currentLayer == 0){
+    scale.update();
+    units = scale.getData();
     if (units < 0 ){ units = 0; }
     if(units < objek && trigger == false){ stateRun = 1; }
 
@@ -891,23 +949,24 @@ float getWeight(){
       stateRun = 0;
       state1=0;
     }
+    saveTmr = tmr;
     return units;
   }
 }
 
 //---------MENGAMBIL VALUE DARI SENSOR LOADCELL UNTUK KALIBRASI LOADCELL-------------//
 void getWeightSet(){
-  unsigned long tmr2 = millis();
-  static unsigned long saveTmr2;
+  // unsigned long tmr2 = millis();
+  // static unsigned long saveTmr2;
 
-  if(tmr2 - saveTmr2 > 500){
-    //scale.power_up();
-    saveTmr2 = tmr2;
-    unitSetting = scale.get_units(),0;
+  // if(tmr2 - saveTmr2 > 500){
+  //   //scale.power_up();
+  //   saveTmr2 = tmr2;
+  //   unitSetting = scale.get_units(),0;
     
-    if (unitSetting < 0 ){ unitSetting = 0; }
-    //return unitSetting;
-  }
+  //   if (unitSetting < 0 ){ unitSetting = 0; }
+  //   //return unitSetting;
+  // }
 }
 
 //-----------MENGHITUNG WAKTU MUNDUR SLEEP LCD----------//
