@@ -95,7 +95,9 @@ long oldPosition  = 0;
 long newPosition = 0;
 unsigned long saveTmrH;
 int conCal =0;
-//int conLevel = 0;
+float errorLength=0;
+float errorWidth=0;
+float errorHeight=0;
 
 float referenceLength = 0.0; // Panjang referensi dalam cm
 float referenceWidth  = 0.0;  // Lebar referensi dalam cm
@@ -104,7 +106,10 @@ float referenceHeight = 0.0; // Tinggi referensi dalam cm
 float calibration_factor = -9; //NILAI KALIBRASI DEFAULT
 
 String menu1[]={"5","kalibrasi Beban","Kalibrasi Dimensi","Set Timer Lock","Set Timer Sleep","Back"};
-String menuJarak[]={"5","Sensor 1:","Sensor 2:","Sensor 3:","auto","Back"};
+String menuJarak[]={"5","Sensor 1","Sensor 2","Sensor 3","auto","Back"};
+String menuSensor1[]={"3","MAXSIMUM:","ERROR   :","BACK"};
+String menuSensor2[]={"3","MAXSIMUM:","ERROR   :","BACK"};
+String menuSensor3[]={"3","MAXSIMUM:","ERROR   :","BACK"};
 char *panah[]{" ","<",">"};
 char *textWeight[]{" Gram"," KG  "};
 
@@ -219,12 +224,18 @@ void setup() {
   valueHeight = EEPROM.read(3);
   timerLock =  EEPROM.read(4);
   timerSleep =EEPROM.read(5);
+  errorLength= EEPROM.read(6);
+  errorWidth= EEPROM.read(7);
+  errorHeight= EEPROM.read(8);
   referenceLength= valueLength;
   referenceWidth = valueWidth;
   referenceHeight= valueHeight;
   calibration_factor = parWeight;
   scale.begin();
-
+  
+  // EEPROM.write(6,2.0);
+  // EEPROM.write(7,3.0);
+  // EEPROM.write(8,6.0);
   unsigned long stabilizingtime = 2000; // preciscion right after power-up can be improved by adding a few seconds of stabilizing time
   boolean _tare = true; //set this to false if you don't want tare to be performed in the next step
   scale.start(stabilizingtime, _tare);
@@ -244,7 +255,9 @@ void setup() {
   Serial.println(String()+"referenceWidth :"+referenceWidth);
   Serial.println(String()+"referenceHeight:"+referenceHeight);
   Serial.println(String()+"calibration_factor:"+calibration_factor);
-  
+   Serial.println(String()+"errorLength :"+errorLength);
+  Serial.println(String()+"errorWidth  :"+errorWidth);
+  Serial.println(String()+"errorHeight :"+errorHeight);
   // Serial.println(String()+"timerSleep:"+timerSleep);
   // Serial.println("build run");
   // Serial.println(String() + "trigger  :" + trigger);
@@ -261,6 +274,8 @@ void loop() {
     timerLCD(); 
     showSetting();
     showLed();
+    Serial.println(String() + "subLayer: " + subLayer);
+    
 }
 
 //----------------TAMPILAN INDIKATOR LED---------------//
@@ -384,27 +399,41 @@ void singleClick(){
  }
 
 
- if(currentLayer != 1 && subLayer == 2 ){
+ else if(currentLayer != 1 && subLayer == 2 ){
     
-  switch(currentSelect){
+ switch(currentSelect){
     case 1 :
-      flagS=!flagS;
+      //flagS=!flagS;
       clearMenu();
+      subLayer = 6;
+      currentSelect = 1;
+      cursorSelect();
+      flagS = 1;
     break;
 
     case 2 :
-      flagS=!flagS;
+      //flagS=!flagS;
       clearMenu();
+      subLayer = 7;
+      currentSelect = 1;
+      cursorSelect();
+      flagS = 1;
     break;
 
     case 3 :
-     flagS=!flagS;
+     //flagS=!flagS;
      clearMenu();
+     subLayer = 8;
+     currentSelect = 1;
+     cursorSelect();
+     flagS = 1;
     break;
 
     case 4 :
      clearMenu();
      subLayer = 5;
+     //currentSelect = 1;
+
     break;
 
    case 5 :
@@ -414,12 +443,73 @@ void singleClick(){
       currentSelect = 2;
       flagS = 0;
       cursorSelect();
-      EEPROM.write(1,valueLength);
-      EEPROM.write(2,valueWidth);
-      EEPROM.write(3,valueHeight);
+
+    break;
+  };
+ }
+
+ if(currentLayer != 1 && subLayer == 6 ){
+  switch(currentSelect){
+    case 1 :
+      flagS = !flagS;
+      clearMenu();
+    break;
+    case 2 :
+      flagS = !flagS;
+      clearMenu();
+    break;
+    case 3 :
+      subLayer=2;
+      currentSelect = 1;
+      cursorSelect();
+      clearMenu();
       referenceLength = valueLength;
+      EEPROM.write(1,valueLength);
+      EEPROM.write(6,errorLength);
+    break;
+  };
+ }
+
+ if(currentLayer != 1 && subLayer == 7 ){
+  switch(currentSelect){
+    case 1 :
+      flagS = !flagS;
+      clearMenu();
+    break;
+    case 2 :
+      flagS = !flagS;
+      clearMenu();
+    break;
+    case 3 :
+      subLayer=2;
+      currentSelect = 2;
+      cursorSelect();
+      clearMenu();
       referenceWidth  = valueWidth;
-      referenceHeight = valueHeight; 
+      EEPROM.write(2,valueWidth);
+      EEPROM.write(7,errorWidth);
+    break;
+  };
+ }
+
+ if(currentLayer != 1 && subLayer == 8 ){
+  switch(currentSelect){
+    case 1 :
+      flagS = !flagS;
+      clearMenu();
+    break;
+    case 2 :
+      flagS = !flagS;
+      clearMenu();
+    break;
+    case 3 :
+      subLayer=2;
+      currentSelect = 3;
+      cursorSelect();
+      clearMenu();
+      referenceHeight = valueHeight;
+      EEPROM.write(3,valueHeight);
+      EEPROM.write(8,errorHeight);
     break;
   };
  }
@@ -462,7 +552,23 @@ void getRotary(){
      case 3 :
        currentLength = 1;
      break;
+
+     case 6 :
+       currentLength = menuSensor1[0].toInt();
+     break;
+
+     case 7 :
+       currentLength = menuSensor2[0].toInt();
+     break;
+
+     case 8 :
+       currentLength = menuSensor3[0].toInt();
+     break;
+
+
   };
+
+  
 
   if (newPosition != oldPosition){
     if (newPosition < oldPosition && currentSelect < currentLength && flagS == 0) {
@@ -499,19 +605,35 @@ void getRotary(){
     }
   
     //-------------TAMPILAN SUB MENU 2 (SET SENSOR JARAK/DIMENSI)---------------//
-    if(subLayer==2 && currentSelect == 1 && flagS == 1){
+    if(subLayer==6  && currentSelect == 1 && flagS == 1){
       if(newPosition < oldPosition && valueLength < 50) { valueLength+=0.1; } 
       else if(newPosition > oldPosition && valueLength > 0){ valueLength-=0.1; }  
     }
   
-    if(subLayer==2 && currentSelect == 2 && flagS == 1){
+    if(subLayer==7 && currentSelect == 1 && flagS == 1){
       if(newPosition < oldPosition && valueWidth < 50) {  valueWidth+=0.1; }
       else if(newPosition > oldPosition && valueWidth > 0){ valueWidth-=0.1; }
     }
   
-    if(subLayer==2 && currentSelect == 3 && flagS == 1){
+    if(subLayer==8 && currentSelect == 1 && flagS == 1){
       if(newPosition < oldPosition && valueHeight < 50) { valueHeight+=0.1; }
       else if(newPosition > oldPosition && valueHeight > 0){ valueHeight-=0.1; }
+    }
+
+    //-------------TAMPILAN SUB MENU 2 (SET error SENSOR JARAK/DIMENSI)---------------//
+    if(subLayer==6  && currentSelect == 2 && flagS == 1){
+      if(newPosition < oldPosition && errorLength < 50) { errorLength+=0.1; } 
+      else if(newPosition > oldPosition && errorLength > 0){ errorLength-=0.1; }  
+    }
+  
+    if(subLayer==7 && currentSelect == 2 && flagS == 1){
+      if(newPosition < oldPosition && errorWidth < 50) {  errorWidth+=0.1; }
+      else if(newPosition > oldPosition && errorWidth > 0){ errorWidth-=0.1; }
+    }
+  
+    if(subLayer==8 && currentSelect == 2 && flagS == 1){
+      if(newPosition < oldPosition && errorHeight < 50) { errorHeight+=0.1; }
+      else if(newPosition > oldPosition && errorHeight > 0){ errorHeight-=0.1; }
     }
   
     //-------------TAMPILAN SUB MENU 3 (SET TIMER LOCK LCD)---------------//
@@ -546,6 +668,9 @@ void getRotary(){
       delay(500);
       lastSleep = timerSleep;
       if(timerSleep == lastSleep){ lcd.setCursor(4,2);lcd.print(panah[0]); lcd.setCursor(9,2);lcd.print(panah[0]);}
+    }
+    if(subLayer==6){
+      
     }
     oldPosition = newPosition;
   }
@@ -741,15 +866,15 @@ void showSetting(){
       for(int i=0;i<4;i++){
         lcd.setCursor(0,i);
         lcd.print(menuJarak[i+1]);
-        lcd.setCursor(15,(i==3)?2:i);
-        lcd.print("CM");
-        lcd.setCursor(10,0);
-        lcd.print(valueLength,1); 
-        lcd.setCursor(10,1);
-        lcd.print(valueWidth,1); 
-        lcd.setCursor(10,2);
-        lcd.print(valueHeight,1); 
-        if(flagS){lcd.setCursor(9,cursorLayer); lcd.print("*");}
+        //lcd.setCursor(15,(i==3)?2:i);
+        // lcd.print("CM");
+        // lcd.setCursor(10,0);
+        // lcd.print(valueLength,1); 
+        // lcd.setCursor(10,1);
+        // lcd.print(valueWidth,1); 
+        // lcd.setCursor(10,2);
+        // lcd.print(valueHeight,1); 
+        // if(flagS){lcd.setCursor(9,cursorLayer); lcd.print("*");}
 
         for(int i=0;i<2;i++){
           lcd.setCursor(19,i);
@@ -825,6 +950,55 @@ void showSetting(){
     subLayer = 2;
     delay(3000);
     lcd.clear();
+  }
+
+  if(subLayer == 6){
+    lcd.setCursor(18,cursorLayer ); 
+    lcd.write(byte(7));
+    for(int i=0;i<currentLength;i++){lcd.setCursor(0,i); lcd.print(menuSensor1[i+1]);}
+    if(valueLength<10){ lcd.setCursor(13,0); lcd.print(" "); }
+    if(errorLength<10){ lcd.setCursor(13,1); lcd.print(" "); }
+    lcd.setCursor(10,0);
+    lcd.print(valueLength,1); 
+    lcd.setCursor(15,0);
+    lcd.print("CM"); 
+    lcd.setCursor(10,1);
+    lcd.print(errorLength,1); 
+    lcd.setCursor(15,1);
+    lcd.print("CM");
+    if(flagS){lcd.setCursor(9,cursorLayer); lcd.print("*");}
+  }
+  if(subLayer == 7){
+    lcd.setCursor(18,cursorLayer ); 
+    lcd.write(byte(7));
+    for(int i=0;i<currentLength;i++){lcd.setCursor(0,i); lcd.print(menuSensor2[i+1]);}
+    if(valueWidth<10){ lcd.setCursor(13,0); lcd.print(" "); }
+    if(errorWidth<10){ lcd.setCursor(13,1); lcd.print(" "); }
+    lcd.setCursor(10,0);
+    lcd.print(valueWidth,1); 
+    lcd.setCursor(15,0);
+    lcd.print("CM");
+    lcd.setCursor(10,1);
+    lcd.print(errorWidth,1); 
+    lcd.setCursor(15,1);
+    lcd.print("CM");
+    if(flagS){lcd.setCursor(9,cursorLayer); lcd.print("*");}
+  }
+  if(subLayer == 8){
+    lcd.setCursor(18,cursorLayer ); 
+    lcd.write(byte(7));
+    for(int i=0;i<currentLength;i++){lcd.setCursor(0,i); lcd.print(menuSensor3[i+1]);}
+    if(valueHeight<10){ lcd.setCursor(13,0); lcd.print(" "); }
+    if(errorHeight<10){ lcd.setCursor(13,1); lcd.print(" "); }
+    lcd.setCursor(10,0);
+    lcd.print(valueHeight,1);
+    lcd.setCursor(15,0); 
+    lcd.print("CM");
+    lcd.setCursor(10,1);
+    lcd.print(errorHeight,1); 
+    lcd.setCursor(15,1);
+    lcd.print("CM");
+    if(flagS){lcd.setCursor(9,cursorLayer); lcd.print("*");}
   }
 }
 
@@ -902,17 +1076,17 @@ void kalkulasi(){
 
 //----------------DEBUGGING PROGRAM KE SERIAL MONITOR--------------------//
 void showMonitor(){
-  Serial.print("Panjang: ");
-  Serial.print(length);
-  Serial.println(" cm");
+  // Serial.print("Panjang: ");
+  // Serial.print(length);
+  // Serial.println(" cm");
  
-  Serial.print("Lebar: ");
-  Serial.print(width);
-  Serial.println(" cm");
+  // Serial.print("Lebar: ");
+  // Serial.print(width);
+  // Serial.println(" cm");
  
-  Serial.print("Tinggi: ");
-  Serial.print(height);
-  Serial.println(" cm");
+  // Serial.print("Tinggi: ");
+  // Serial.print(height);
+  // Serial.println(" cm");
  
   // Serial.print("Berat: ");
   // Serial.print((weight >= 1000)? weight / 1000 : weight);
