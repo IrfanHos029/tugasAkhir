@@ -218,15 +218,16 @@ void setup() {
   lcd.createChar(6, speaker);
   lcd.createChar(7, pointer);
 
-  parWeight = EEPROM.read(0);
-  valueLength = EEPROM.read(1);
-  valueWidth = EEPROM.read(2);
-  valueHeight = EEPROM.read(3);
-  timerLock =  EEPROM.read(4);
-  timerSleep =EEPROM.read(5);
-  errorLength= EEPROM.read(6);
-  errorWidth= EEPROM.read(7);
-  errorHeight= EEPROM.read(8);
+  EEPROM.get(0,parWeight);
+  EEPROM.get(10,valueLength);
+  EEPROM.get(20,valueWidth);
+  EEPROM.get(30,valueHeight);
+  EEPROM.get(40,timerLock);
+  EEPROM.get(50,timerSleep);
+  EEPROM.get(60,errorLength);
+  EEPROM.get(70,errorWidth);
+  EEPROM.get(80,errorHeight);
+
   referenceLength= valueLength;
   referenceWidth = valueWidth;
   referenceHeight= valueHeight;
@@ -255,12 +256,12 @@ void setup() {
   Serial.println(String()+"referenceWidth :"+referenceWidth);
   Serial.println(String()+"referenceHeight:"+referenceHeight);
   Serial.println(String()+"calibration_factor:"+calibration_factor);
-   Serial.println(String()+"errorLength :"+errorLength);
+  Serial.println(String()+"errorLength :"+errorLength);
   Serial.println(String()+"errorWidth  :"+errorWidth);
   Serial.println(String()+"errorHeight :"+errorHeight);
-  // Serial.println(String()+"timerSleep:"+timerSleep);
+  Serial.println(String()+"timerSleep  :"+timerSleep);
   // Serial.println("build run");
-  // Serial.println(String() + "trigger  :" + trigger);
+  Serial.println(String() +"timerLock  :" + timerLock);
   // Serial.println(String() + "runObject:" + runObject);
   // Serial.println(String() + "timeRead :" + timeRead);
   // Serial.println(String() + "stateRun :" + stateRun);
@@ -269,12 +270,13 @@ void setup() {
 
 void loop() {
     button0.tick();
+    timerLCD();
     getRotary();
     kalkulasi();
-    timerLCD(); 
     showSetting();
     showLed();
-    Serial.println(String() + "subLayer: " + subLayer);
+     
+    //Serial.println(String() + "subLayer: " + subLayer);
     
 }
 
@@ -331,7 +333,7 @@ void singleClick(){
       subLayer = 2;
       currentLayer =-1;
       currentSelect = 1;
-      flagS = 1;
+      //flagS = 1;
      cursorSelect();
     break;
 
@@ -374,7 +376,7 @@ void singleClick(){
   cursorSelect();
   conCal = 0;
   scale.refreshDataSet();
-  EEPROM.write(0,parWeight);
+  EEPROM.put(0,parWeight);
   scale.getNewCalibration(parWeight); //get the new calibration value
   Serial.println("KALIBRASI SELESAI");
   clearMenu();
@@ -386,7 +388,7 @@ void singleClick(){
    currentLayer = 1;
    currentSelect = 3;
    cursorSelect();
-   EEPROM.write(4,timerLock);
+   EEPROM.put(40,timerLock);
  }
 
  else if(currentLayer != 1 && subLayer == 4 ){
@@ -395,7 +397,7 @@ void singleClick(){
    currentLayer = 1;
    currentSelect = 4;
    cursorSelect();
-   EEPROM.write(5,timerSleep);
+   EEPROM.put(50,timerSleep);
  }
 
 
@@ -464,8 +466,8 @@ void singleClick(){
       cursorSelect();
       clearMenu();
       referenceLength = valueLength;
-      EEPROM.write(1,valueLength);
-      EEPROM.write(6,errorLength);
+      EEPROM.put(10,valueLength);
+      EEPROM.put(60,errorLength);
     break;
   };
  }
@@ -486,8 +488,8 @@ void singleClick(){
       cursorSelect();
       clearMenu();
       referenceWidth  = valueWidth;
-      EEPROM.write(2,valueWidth);
-      EEPROM.write(7,errorWidth);
+      EEPROM.put(20,valueWidth);
+      EEPROM.put(70,errorWidth);
     break;
   };
  }
@@ -508,8 +510,8 @@ void singleClick(){
       cursorSelect();
       clearMenu();
       referenceHeight = valueHeight;
-      EEPROM.write(3,valueHeight);
-      EEPROM.write(8,errorHeight);
+      EEPROM.put(30,valueHeight);
+      EEPROM.put(80,errorHeight);
     break;
   };
  }
@@ -924,6 +926,10 @@ void showSetting(){
     valueLength = referenceLength;
     valueWidth  = referenceWidth;
     valueHeight = referenceHeight;
+    
+    EEPROM.put(10,valueLength);
+    EEPROM.put(20,valueWidth);
+    EEPROM.put(30,valueHeight);
 
     lcd.setCursor(1,0);
     lcd.print("KALIBRASI SELESAI");
@@ -1030,13 +1036,15 @@ void kalkulasi(){
     co = (millis() - saveTmr3)/1000;
     lcd.setCursor(18,0);
     lcd.print(co);
-    if(panjang <= referenceLength){ hasilP = referenceLength - panjang; } else{  hasilP = 0.0; }
-    if(lebar <= referenceWidth){ hasilL = referenceWidth - lebar; }       else{  hasilL = 0.0; }
-    if(tinggi <= referenceHeight){  hasilT = referenceHeight - tinggi; }  else{  hasilT = 0.0; }
+    if(co<10){lcd.setCursor(19,0); lcd.print(" "); }
 
-    //if(hasilP >= referenceLength){ hasilP = 0.0; }
-    // if(hasilL >= referenceWidth ){ hasilL = 0.0; }
-    // if(hasilT >= referenceHeight){ hasilT = 0.0; }
+    if(panjang <= referenceLength){ hasilP = referenceLength - (panjang+errorLength); } else{  hasilP = 0.0; }
+    if(lebar <= referenceWidth){ hasilL = referenceWidth - (lebar+errorWidth); }       else{  hasilL = 0.0; }
+    if(tinggi <= referenceHeight){  hasilT = referenceHeight - (tinggi+errorHeight); }  else{  hasilT = 0.0; }
+
+    if(hasilP < 0){ hasilP = 0.0; }
+    if(hasilL < 0){ hasilL = 0.0; }
+    if(hasilT < 0){ hasilT = 0.0; }
     showMonitor();
   }else{ 
     saveTmr3 = millis(); 
@@ -1076,9 +1084,13 @@ void kalkulasi(){
 
 //----------------DEBUGGING PROGRAM KE SERIAL MONITOR--------------------//
 void showMonitor(){
-  // Serial.print("Panjang: ");
-  // Serial.print(length);
-  // Serial.println(" cm");
+  Serial.print("Panjang: ");
+  Serial.print(length);
+  Serial.println(" cm");
+
+  Serial.print("panjang+errorLength: ");
+  Serial.print(length+errorLength);
+  
  
   // Serial.print("Lebar: ");
   // Serial.print(width);
