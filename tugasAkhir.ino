@@ -75,29 +75,28 @@ bool state1 = 0;
 int  length,height,width;
 int  timerFlag;
 int  timeRead = 0;
-int lastStep,lastSleep,lastLock;
-int timerLock,timerSleep;
+int  lastStep,lastSleep,lastLock;
+int  timerLock,timerSleep;
 float hasilP = 0.0;
 float hasilL = 0.0;
 float hasilT = 0.0;
 float valueLength = 0.0;
 float valueWidth  = 0.0;
 float valueHeight = 0.0;
+float errorLength = 0.0;
+float errorWidth  = 0.0;
+float errorHeight = 0.0;
 int currentSelect = 1;
 int currentLength;
 int units   = -1;
 int weightToInt;
+int conCal =0;
 float unitSetting = -1;
 float ounces;
 float parWeight=50;
 float weight;
 long oldPosition  = 0;
 long newPosition = 0;
-
-int conCal =0;
-float errorLength=0;
-float errorWidth=0;
-float errorHeight=0;
 
 float referenceLength = 0.0; // Panjang referensi dalam cm
 float referenceWidth  = 0.0;  // Lebar referensi dalam cm
@@ -202,7 +201,7 @@ byte pointer[] = {
 
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
-  //lcd.init(); 
+  scale.begin(); 
   lcd.begin();
   lcd.backlight();
   pinMode(buzzer, OUTPUT);
@@ -232,26 +231,31 @@ void setup() {
   referenceWidth = valueWidth;
   referenceHeight= valueHeight;
   
-  scale.begin();
   
-  // EEPROM.write(6,2.0);
-  // EEPROM.write(7,3.0);
-  // EEPROM.write(8,6.0);
+
   unsigned long stabilizingtime = 2000; // preciscion right after power-up can be improved by adding a few seconds of stabilizing time
   boolean _tare = true; //set this to false if you don't want tare to be performed in the next step
   scale.start(stabilizingtime, _tare);
-scale.setCalFactor(calibration_factor);
+  if (scale.getTareTimeoutFlag()) {
+    Serial.println("Timeout, check MCU>HX711 wiring and pin designations");
+    lcd.setCursor(0,1);
+    lcd.print("ERROR in LOAD CELL!!");
+    while (1);
+  }
+  else {
+    scale.setCalFactor(calibration_factor); // set calibration value (float)
+    Serial.println("Startup is complete");
+    for(int i = 0; i < 100; i++){
+      lcd.setCursor(0,0);
+      lcd.print("LOADING..");
+      lcd.setCursor(16,0);
+      lcd.print(i);
+      lcd.print("%");
+      updateProgressBar(i, 100, 1);
+      delay(50);
+    }
+  }
   
-  
-//  for(int i = 0; i < 100; i++){
-//    lcd.setCursor(0,0);
-//    lcd.print("LOADING..");
-//    lcd.setCursor(16,0);
-//    lcd.print(i);
-//    lcd.print("%");
-//    updateProgressBar(i, 100, 1);
-//    delay(50);
-//  }
   Serial.println(String()+"referenceLength:"+referenceLength);
   Serial.println(String()+"referenceWidth :"+referenceWidth);
   Serial.println(String()+"referenceHeight:"+referenceHeight);
@@ -362,7 +366,6 @@ void singleClick(){
       timeRead  = 0; 
       timerFlag = 0;
       state1=0;
-      
     break;
   };
  }
@@ -1019,7 +1022,6 @@ void kalkulasi(){
   static unsigned long saveTmr1 = 0;
   static unsigned long saveTmr2 = 0;
   static unsigned long saveTmr3 = 0;
-  //static int           x = 0;
   static float         panjang = 0.0,lebar = 0.0,tinggi = 0.0;
   static int           co;
  
@@ -1049,7 +1051,9 @@ void kalkulasi(){
     if(hasilP < 0){ hasilP = 0.0; }
     if(hasilL < 0){ hasilL = 0.0; }
     if(hasilT < 0){ hasilT = 0.0; }
+
     showMonitor();
+
   }else{ 
     saveTmr3 = millis(); 
     co=0; 
@@ -1131,22 +1135,6 @@ float getWeight(){
 
   if(scale.update()) newDataReady = true;
 
-  /*if(tmr - saveTmr > 50 && runObject == true  && currentLayer == 0){
-    scale.update();
-    units = scale.getData();
-    if (units < 0 ){ units = 0; }
-    if(units < objek && trigger == false){ stateRun = 1; }
-
-    if(units > objek ){
-      trigger = true;
-      flagTr  = 1;
-      stateRun = 0;
-      state1=0;
-    }
-    saveTmr = tmr;
-    return units;
-  }*/
-  
   if(newDataReady){
     if(millis() > saveTmr + flagWeight && runObject == true  && currentLayer == 0){
 
@@ -1167,19 +1155,19 @@ float getWeight(){
 }
 
 //---------MENGAMBIL VALUE DARI SENSOR LOADCELL UNTUK KALIBRASI LOADCELL-------------//
-void getWeightSet(){
-  // unsigned long tmr2 = millis();
-  // static unsigned long saveTmr2;
+/*void getWeightSet(){
+  unsigned long tmr2 = millis();
+  static unsigned long saveTmr2;
 
-  // if(tmr2 - saveTmr2 > 500){
-  //   //scale.power_up();
-  //   saveTmr2 = tmr2;
-  //   unitSetting = scale.get_units(),0;
+  if(tmr2 - saveTmr2 > 500){
+    //scale.power_up();
+    saveTmr2 = tmr2;
+    unitSetting = scale.get_units(),0;
     
-  //   if (unitSetting < 0 ){ unitSetting = 0; }
-  //   //return unitSetting;
-  // }
-}
+    if (unitSetting < 0 ){ unitSetting = 0; }
+    //return unitSetting;
+  }
+}*/
 
 //-----------MENGHITUNG WAKTU MUNDUR SLEEP LCD----------//
 void timerLCD(){
@@ -1189,15 +1177,7 @@ void timerLCD(){
   static unsigned long saveTmrH=0;
  unsigned long tmr = millis();
   if(timerSleep > 0){ Run = 1; } else{ Run = 0; }
-  // if(stateRun == 1 && Run == 1){
-  //   flagTr=1;
-  //   if(state1==0 ){  co = (millis() - saveTmrH)/1000;  }
-  //   lcd.setCursor(18,0);
-  //   lcd.print(co);
-  //   Serial.println(String()+"co:" + (millis() - saveTmrH)/1000);
-  // }
-  // else{ saveTmrH = millis(); co = 0;  }
-
+  
   if(stateRun == 1 && Run == 1){
     flagTr=1;
     if((tmr - saveTmrH) > 1000 && state1==0 ){ saveTmrH = tmr; co++;  }
@@ -1205,13 +1185,7 @@ void timerLCD(){
     lcd.print(co);
     Serial.println(String()+"co:" + co);
   }
- // else{    }
-  
-  // if((millis() - saveTmrH) > Delay && stateRun == 1 && Run == 1){
-    
-  //   if(state1==0 && stateRun == 1){state1 = 1;}
-
-  // }
+ 
   if(co >= timerSleep && stateRun == 1 && Run == 1){
     
     if(state1==0 && stateRun == 1){state1 = 1;}
