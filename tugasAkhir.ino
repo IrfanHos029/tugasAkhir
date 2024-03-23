@@ -93,7 +93,7 @@ float parWeight=50;
 float weight;
 long oldPosition  = 0;
 long newPosition = 0;
-unsigned long saveTmrH;
+
 int conCal =0;
 float errorLength=0;
 float errorWidth=0;
@@ -1183,27 +1183,42 @@ void getWeightSet(){
 
 //-----------MENGHITUNG WAKTU MUNDUR SLEEP LCD----------//
 void timerLCD(){
-  static int Run;
+  static int Run=0;
   int Delay = timerSleep*1000;
-  static int co;
-  
+  static int co=0;
+  static unsigned long saveTmrH=0;
+ unsigned long tmr = millis();
   if(timerSleep > 0){ Run = 1; } else{ Run = 0; }
+  // if(stateRun == 1 && Run == 1){
+  //   flagTr=1;
+  //   if(state1==0 ){  co = (millis() - saveTmrH)/1000;  }
+  //   lcd.setCursor(18,0);
+  //   lcd.print(co);
+  //   Serial.println(String()+"co:" + (millis() - saveTmrH)/1000);
+  // }
+  // else{ saveTmrH = millis(); co = 0;  }
+
   if(stateRun == 1 && Run == 1){
     flagTr=1;
-    unsigned long tmrH = millis();
+    if((tmr - saveTmrH) > 1000 && state1==0 ){ saveTmrH = tmr; co++;  }
     lcd.setCursor(18,0);
     lcd.print(co);
-    if(state1==0){  co = (millis() - saveTmrH)/1000;  }
+    Serial.println(String()+"co:" + co);
   }
-  else{ saveTmrH = millis(); co = 0;  }
+ // else{    }
   
-  if((millis() - saveTmrH) > Delay && stateRun == 1 && Run == 1){
+  // if((millis() - saveTmrH) > Delay && stateRun == 1 && Run == 1){
+    
+  //   if(state1==0 && stateRun == 1){state1 = 1;}
+
+  // }
+  if(co >= timerSleep && stateRun == 1 && Run == 1){
     
     if(state1==0 && stateRun == 1){state1 = 1;}
 
   }
 
-  if(state1 == 1){ flagTr=0; clearChar(18,0); clearChar(19,0); }
+  if(state1 == 1){co = 0; flagTr=0; clearChar(18,0); clearChar(19,0); }
 }
 
 //--------BUZZER-----------//
