@@ -89,7 +89,7 @@ int units   = -1;
 int weightToInt;
 float unitSetting = -1;
 float ounces;
-float parWeight=900;
+float parWeight=50;
 float weight;
 long oldPosition  = 0;
 long newPosition = 0;
@@ -218,7 +218,7 @@ void setup() {
   lcd.createChar(6, speaker);
   lcd.createChar(7, pointer);
 
-  EEPROM.get(0,parWeight);
+  EEPROM.get(0,calibration_factor);
   EEPROM.get(10,valueLength);
   EEPROM.get(20,valueWidth);
   EEPROM.get(30,valueHeight);
@@ -231,7 +231,7 @@ void setup() {
   referenceLength= valueLength;
   referenceWidth = valueWidth;
   referenceHeight= valueHeight;
-  calibration_factor = parWeight;
+  
   scale.begin();
   
   // EEPROM.write(6,2.0);
@@ -240,9 +240,9 @@ void setup() {
   unsigned long stabilizingtime = 2000; // preciscion right after power-up can be improved by adding a few seconds of stabilizing time
   boolean _tare = true; //set this to false if you don't want tare to be performed in the next step
   scale.start(stabilizingtime, _tare);
-
-  scale.setCalFactor(calibration_factor);
-  //scale.tare();
+scale.setCalFactor(calibration_factor);
+  
+  
 //  for(int i = 0; i < 100; i++){
 //    lcd.setCursor(0,0);
 //    lcd.print("LOADING..");
@@ -260,11 +260,11 @@ void setup() {
   Serial.println(String()+"errorWidth  :"+errorWidth);
   Serial.println(String()+"errorHeight :"+errorHeight);
   Serial.println(String()+"timerSleep  :"+timerSleep);
-  // Serial.println("build run");
   Serial.println(String() +"timerLock  :" + timerLock);
   // Serial.println(String() + "runObject:" + runObject);
   // Serial.println(String() + "timeRead :" + timeRead);
   // Serial.println(String() + "stateRun :" + stateRun);
+  
   lcd.clear();
 }
 
@@ -275,9 +275,6 @@ void loop() {
     kalkulasi();
     showSetting();
     showLed();
-     
-    //Serial.println(String() + "subLayer: " + subLayer);
-    
 }
 
 //----------------TAMPILAN INDIKATOR LED---------------//
@@ -287,8 +284,13 @@ void showLed(){
     else if(state1 == 0 && runObject == 0 && currentLayer == 0){getIndikator(0,0,0); getIndikator(1,0,1); getIndikator(2,0,0);}
     else if(currentLayer == 1 && subLayer == 0){getIndikator(0,0,0); getIndikator(1,0,0); getIndikator(2,0,1);}
     else if(currentLayer != 1 && subLayer == 1){ getIndikator(2,1,0); }
-    else if(currentLayer != 1 && subLayer == 2 && flagS == 0){ getIndikator(2,0,1); }
-    else if(currentLayer != 1 && subLayer == 2 && flagS == 1){ getIndikator(2,1,0); }
+    else if(currentLayer != 1 && subLayer == 2){ getIndikator(2,0,1); }
+    else if(currentLayer != 1 && subLayer == 6 && flagS == 0){ getIndikator(2,0,1); }
+    else if(currentLayer != 1 && subLayer == 7 && flagS == 0){ getIndikator(2,0,1); }
+    else if(currentLayer != 1 && subLayer == 8 && flagS == 0){ getIndikator(2,0,1); }
+    else if(currentLayer != 1 && subLayer == 6 && flagS == 1){ getIndikator(2,1,0); }
+    else if(currentLayer != 1 && subLayer == 7 && flagS == 1){ getIndikator(2,1,0); }
+    else if(currentLayer != 1 && subLayer == 8 && flagS == 1){ getIndikator(2,1,0); }
     else if(currentLayer != 1 && subLayer == 3){ getIndikator(2,1,0); }
     else if(currentLayer != 1 && subLayer == 4){ getIndikator(2,1,0); }
 }
@@ -333,7 +335,6 @@ void singleClick(){
       subLayer = 2;
       currentLayer =-1;
       currentSelect = 1;
-      //flagS = 1;
      cursorSelect();
     break;
 
@@ -376,8 +377,8 @@ void singleClick(){
   cursorSelect();
   conCal = 0;
   scale.refreshDataSet();
-  EEPROM.put(0,parWeight);
-  scale.getNewCalibration(parWeight); //get the new calibration value
+  calibration_factor = scale.getNewCalibration(parWeight); //get the new calibration value
+  EEPROM.put(0,calibration_factor);
   Serial.println("KALIBRASI SELESAI");
   clearMenu();
  }
@@ -800,30 +801,33 @@ void showSetting(){
 
   if(subLayer==1){
      static int conLevel=0;
+     scale.update();
     if(conCal==1){
-      unsigned long tmr = millis();
+      //unsigned long tmr = millis();
       static unsigned long save = 0;
       
-      scale.update();
-      if(tmr - save > 500){
-        save = tmr;
+      
+      if(millis() - save > 500){
+        save = millis();
         if(conLevel==10){scale.tareNoDelay();   }
         lcd.setCursor(0,1);
         lcd.print("KOSONGKAN TIMBANGAN!");
         conLevel++;
-      }
-      
-      if (scale.getTareStatus() == true ) {
+        if (scale.getTareStatus() == true && conLevel >= 10) {
         conLevel = 0;
         conCal = 2;
+        save = 0;
         lcd.clear();
       }
+      }
+      
+      
       Serial.println(String() + "conLevel:" + conLevel);
     }
 
     else if(conCal==2){
       
-      scale.update();
+      //scale.update();
       lcd.setCursor(3,0);
       lcd.print("TARUH BEBAN!!!");
       lcd.setCursor(0,2);
@@ -1084,12 +1088,12 @@ void kalkulasi(){
 
 //----------------DEBUGGING PROGRAM KE SERIAL MONITOR--------------------//
 void showMonitor(){
-  Serial.print("Panjang: ");
-  Serial.print(length);
-  Serial.println(" cm");
+  // Serial.print("Panjang: ");
+  // Serial.print(length);
+  // Serial.println(" cm");
 
-  Serial.print("panjang+errorLength: ");
-  Serial.print(length+errorLength);
+  // Serial.print("panjang+errorLength: ");
+  // Serial.print(length+errorLength);
   
  
   // Serial.print("Lebar: ");
@@ -1122,8 +1126,12 @@ float getWeight(){
   unsigned long tmr = millis();
   static unsigned long saveTmr=0;
   static int objek = 1;//
- 
-  if(tmr - saveTmr > 50 && runObject == true  && currentLayer == 0){
+  const int flagWeight=0;
+  static bool newDataReady = 0;
+
+  if(scale.update()) newDataReady = true;
+
+  /*if(tmr - saveTmr > 50 && runObject == true  && currentLayer == 0){
     scale.update();
     units = scale.getData();
     if (units < 0 ){ units = 0; }
@@ -1137,6 +1145,24 @@ float getWeight(){
     }
     saveTmr = tmr;
     return units;
+  }*/
+  
+  if(newDataReady){
+    if(millis() > saveTmr + flagWeight && runObject == true  && currentLayer == 0){
+
+      units = scale.getData();
+      if (units < 0 ){ units = 0; }
+      if(units < objek && trigger == false){ stateRun = 1; }
+
+      if(units > objek ){
+        trigger = true;
+        flagTr  = 1;
+        stateRun = 0;
+        state1=0;
+      }
+      newDataReady = 0;
+      return units;
+    }
   }
 }
 
