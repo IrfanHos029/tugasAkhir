@@ -48,7 +48,7 @@
 //----------button-----------//
 #define buttonReset 2     //STATIC
 //----------buzzer-----------//
-#define buzzer 22         //STATIC
+#define buzzer A0//22         //STATIC
 //------led indikator--------//
 int led[]={ 11, 12, 13};  //STATIC
 
@@ -198,7 +198,7 @@ byte pointer[] = {
   B00000,
   B00000
 };
-
+ int coT=0;
 void setup() {
   Serial.begin(9600); // Inisialisasi komunikasi serial
   scale.begin(); 
@@ -268,8 +268,10 @@ void setup() {
   // Serial.println(String() + "runObject:" + runObject);
   // Serial.println(String() + "timeRead :" + timeRead);
   // Serial.println(String() + "stateRun :" + stateRun);
-  
+  buzzerRun(1);
   lcd.clear();
+  delay(1000);
+  buzzerRun(0);
 }
 
 void loop() {
@@ -316,6 +318,7 @@ void singleClick(){
     timeRead  = 0; 
     state1=0;
     stateRun  = 0;
+    coT=0;
     scale.tare();
     Serial.println(String() + "trigger  :" + trigger);
     Serial.println(String() + "runObject:" + runObject);
@@ -366,6 +369,7 @@ void singleClick(){
       timeRead  = 0; 
       timerFlag = 0;
       state1=0;
+      coT=0;
     break;
   };
  }
@@ -1173,26 +1177,26 @@ float getWeight(){
 void timerLCD(){
   static int Run=0;
   int Delay = timerSleep*1000;
-  static int co=0;
+  
   static unsigned long saveTmrH=0;
  unsigned long tmr = millis();
   if(timerSleep > 0){ Run = 1; } else{ Run = 0; }
   
   if(stateRun == 1 && Run == 1){
     flagTr=1;
-    if((tmr - saveTmrH) > 1000 && state1==0 ){ saveTmrH = tmr; co++;  }
+    if((tmr - saveTmrH) > 1000 && state1==0 ){ saveTmrH = tmr; coT++;  }
     lcd.setCursor(18,0);
-    lcd.print(co);
-    Serial.println(String()+"co:" + co);
+    lcd.print(coT);
+   //// Serial.println(String()+"co:" + co);
   }
  
-  if(co >= timerSleep && stateRun == 1 && Run == 1){
+  if(coT >= timerSleep && stateRun == 1 && Run == 1){
     
     if(state1==0 && stateRun == 1){state1 = 1;}
 
   }
 
-  if(state1 == 1){co = 0; flagTr=0; clearChar(18,0); clearChar(19,0); }
+  if(state1 == 1){coT = 0; flagTr=0; clearChar(18,0); clearChar(19,0); }
 }
 
 //--------BUZZER-----------//
